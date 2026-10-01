@@ -1,0 +1,12 @@
+{
+  "name": "backendserver",
+  "version": "1.0.0",
+  "description": "Backend for Memoria Project",
+  "license": "ISC",
+  "author": "Rayat and Karma",
+  "type": "module ",
+  "main": "server.js ",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
