@@ -5,7 +5,7 @@ import app from './app.js';
 //invoke database function to run 
 
 
-PORT=process.env.PORT; 
+const PORT = process.env.PORT; 
 
 app.listen(PORT, () => { 
     console.log(`Server Successfully running on ${PORT}`);
