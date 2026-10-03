@@ -5,7 +5,7 @@ MERN (MongoDB, Express, React, Node) digital memory journal that turns your came
 Below is the System Design I originally created compared to a more detailed flow. As you can see, they are very similar, with a few key differences. My original design captured the core modules but blurred the line between my server and external services, left file storage undecided, and mainly focused on the write path. The refined design addresses these gaps by adding object storage, authentication middleware across routes, asynchronous AI captioning, and dedicated read endpoints for the timeline and globe.
 
 ### My original design System Design Flow Chart
-![Original Memoria system design](docs/memoria-sd-v1.drawio.svg)
+![Original Memoria system design](docs/systemdesignv1.svg)
 
 ### Refined design
-![Refined Memoria system design](docs/memoria-sd-v2.drawio.svg)
+![Refined Memoria system design](docs/systemdesignv2.svg)
