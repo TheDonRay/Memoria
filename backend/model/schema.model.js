@@ -26,11 +26,9 @@ const memoriaSchema = new mongoose.Schema({
         default: "pending"
     }, 
     takenAt: Date, 
-    location: { 
-        type: { type: pointSchema, default: 'Undefined' },                                   // [lng, lat]
-        placeName: String,
-  },
-}, { timestamps: true });  
+    location: { type: pointSchema, default: undefined },   // GeoJSON { type: 'Point', coordinates: [lng, lat] }
+    placeName: String,
+}, { timestamps: true });
 
 memoriaSchema.index({ location: '2dsphere' });          // globe queries
 memoriaSchema.index({ userId: 1, takenAt: -1 });         // timeline: a user's memories by date
