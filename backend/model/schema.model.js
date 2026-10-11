@@ -1,5 +1,12 @@
 import mongoose from 'mongoose'; 
 
+
+// GeoJSON point (kept separate so memories without GPS have no location at all)
+const pointSchema = new mongoose.Schema({
+    type: { type: String, enum: ['Point'], required: true },
+    coordinates: { type: [Number], required: true },   // [lng, lat]
+}, { _id: false });
+
 // creating the schema below 
 const memoriaSchema = new mongoose.Schema({
     userId: { 
@@ -20,12 +27,14 @@ const memoriaSchema = new mongoose.Schema({
     }, 
     takenAt: Date, 
     location: { 
-         type: { type: String, enum: ['Point'], default: 'Point' },
-        coordinates: [Number],                                   // [lng, lat]
+        type: { type: pointSchema, default: 'Undefined' },                                   // [lng, lat]
         placeName: String,
   },
-}, { timestamps: true }); 
+}, { timestamps: true });  
 
-const MemoriaUserData = mongoose.model('MemoriaUserData', memoriaSchema); 
+memoriaSchema.index({ location: '2dsphere' });          // globe queries
+memoriaSchema.index({ userId: 1, takenAt: -1 });         // timeline: a user's memories by date
 
-export default MemoriaUserData; 
+const Memory = mongoose.model('Memory', memoriaSchema); 
+
+export default Memory; 
