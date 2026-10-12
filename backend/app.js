@@ -1,10 +1,12 @@
 import express from 'express'; 
 const app = express(); 
-
+import { clerkMiddleware } from '@clerk/express';
 // json parser 
 app.use(express.json()); 
+app.use(clerkMiddleware())
 
-// import statements of routes  
+// import statements of routes
+import testRoute from './routes/usertest.route.js';
 
 
 
@@ -15,7 +17,8 @@ app.get('/Welcome', (req, res) => {
     }); 
 }); 
 
-//mount on routes 
+//mount on routes
+app.use('/api', testRoute);
 
 
 export default app; 
