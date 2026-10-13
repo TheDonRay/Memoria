@@ -1,12 +1,20 @@
 import express from 'express'; 
 const app = express(); 
 import { clerkMiddleware } from '@clerk/express';
-// json parser 
+import cors from 'cors';
+
+// allow the frontend to call the API (set CLIENT_URL in .env, defaults to Vite dev server)
+app.use(cors({
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    credentials: true
+}));
+
+// json parser
 app.use(express.json()); 
 app.use(clerkMiddleware())
 
 // import statements of routes
-import testRoute from './routes/usertest.route.js';
+import userInfoRoute from './routes/userinfo.route.js';
 
 
 
@@ -18,7 +26,7 @@ app.get('/Welcome', (req, res) => {
 }); 
 
 //mount on routes
-app.use('/api', testRoute);
+app.use('/api/v1', userInfoRoute);
 
 
 export default app; 
