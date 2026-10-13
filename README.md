@@ -2,8 +2,9 @@
 MERN (MongoDB, Express, React, Node) digital memory journal that turns your camera roll into an explorable timeline. Upload photos and notes, generate AI captions, plot memories on a 3D globe, and organize them by date, place, and time. 
 
 # Tasks for Backend 
-- Connect Clerk to the backend
-- testing for authenticated Users etc making sure they get session IDs and if i need to change to a production key etc keep that in mind. 
+- Clerk authentican and connecting to Google SSO completed and tested. All requests documented on postman as a collection of tests to execute and understand process of authentication.
+- setting up either S3 / Cloudinary
+  - breaks into /upload route, saving, uploading to mongodb with respect to users id and their session making sure session and data are saved. 
 
 # System Design Backend
 Below is the System Design I originally created compared to a more detailed flow. As you can see, they are very similar, with a few key differences. My original design captured the core modules but blurred the line between my server and external services, left file storage undecided, and mainly focused on the write path. The refined design addresses these gaps by adding object storage, authentication middleware across routes, asynchronous AI captioning, and dedicated read endpoints for the timeline and globe.
