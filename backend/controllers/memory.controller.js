@@ -1,8 +1,8 @@
 import { getAuth } from '@clerk/express';
 // import the service file here
-import userMemoryService from '../services/memory.service.js';
+import { createMemoryService } from '../services/memory.service.js';
 
-const userMemoryController = async (req, res) => {
+export const createMemoryController = async (req, res) => {
     //set up try and catch case and call service file with the userId
     try {
         // userId comes from the verified token (requireUserAuth already blocked unsigned users)
@@ -17,7 +17,7 @@ const userMemoryController = async (req, res) => {
         }
 
         // call our service function with this data
-        const newMemory = await userMemoryService(userId, { imageURL, note, caption, takenAt, location, placeName });
+        const newMemory = await createMemoryService(userId, { imageURL, note, caption, takenAt, location, placeName });
         return res.status(201).json(newMemory);
     } catch (error) {
         // schema validation errors are the client's fault, anything else is a server error
@@ -34,4 +34,3 @@ const userMemoryController = async (req, res) => {
     }
 }; 
 
-export default userMemoryController;

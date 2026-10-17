@@ -5,9 +5,9 @@ const userMemories = express.Router();
 import requireUserAuth from '../middleware/auth.middleware.js'; 
 
 //import controller service here  
-import userMemoryController from '../controllers/memory.controller.js'; 
+import { createMemoryController } from '../controllers/memory.controller.js'; 
 
 // going to be a post request that uploads the memories for us here 
-userMemories.post('/memories', requireUserAuth, userMemoryController);  
+userMemories.post('/memories', requireUserAuth, createMemoryController);  
 
 export default userMemories; 
