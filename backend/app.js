@@ -9,13 +9,14 @@ app.use(cors({
     credentials: true
 }));
 
-// json parser
+// json parser and clerk middleware
 app.use(express.json()); 
 app.use(clerkMiddleware())
 
 // import statements of routes
 import userInfoRoute from './routes/userinfo.route.js';
-
+// upload memory route
+import userMemories from './routes/memory.route.js';
 
 
 // default route set up 
@@ -27,6 +28,7 @@ app.get('/Welcome', (req, res) => {
 
 //mount on routes
 app.use('/api/v1', userInfoRoute);
+app.use('/api/v1', userMemories);
 
 
 export default app; 
