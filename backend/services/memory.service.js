@@ -6,3 +6,6 @@ export const createMemoryService = async (userId, data) => {
     return Memory.create({ ...data, userId });
 }
 
+export const retrieveUsrMemoryService = async (userId) => { 
+    // call database and use .find method on userId to get data 
+}; 

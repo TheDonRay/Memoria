@@ -1,6 +1,7 @@
 import { getAuth } from '@clerk/express';
 // import the service file here
 import { createMemoryService } from '../services/memory.service.js';
+import { retrieveUsrMemoryService } from '../services/memory.service.js'; 
 
 export const createMemoryController = async (req, res) => {
     //set up try and catch case and call service file with the userId
@@ -34,3 +35,12 @@ export const createMemoryController = async (req, res) => {
     }
 }; 
 
+// retrieve user memory information here as such 
+export const retrieveUsrMemoryController = async (req, res) => { 
+    try  {
+        // start of with req userId and go into retrieving a user's specific data using their userId 
+        // pass userId to a retrieve Service Function to actually obtain that data. 
+    } catch (error) { 
+
+    }
+} 
