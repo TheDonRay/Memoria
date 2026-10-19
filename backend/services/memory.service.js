@@ -7,5 +7,6 @@ export const createMemoryService = async (userId, data) => {
 }
 
 export const retrieveUsrMemoryService = async (userId) => { 
-    // call database and use .find method on userId to get data 
+    // call database and use .find method on userId to get data, newest first (createdAt breaks ties / covers missing takenAt)
+    return Memory.find({ userId }).sort({ takenAt: -1, createdAt: -1 });
 }; 
