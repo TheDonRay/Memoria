@@ -39,8 +39,15 @@ export const createMemoryController = async (req, res) => {
 export const retrieveUsrMemoryController = async (req, res) => { 
     try  {
         // start of with req userId and go into retrieving a user's specific data using their userId 
-        // pass userId to a retrieve Service Function to actually obtain that data. 
-    } catch (error) { 
-
+        const {userId} = getAuth(req); 
+        // call the service function. 
+        const memories = await retrieveUsrMemoryService(userId);
+        return res.status(200).json(memories);
+    } catch (error) {
+        // a GET has no body to validate, so any error here is a server error
+        console.error("Error retrieving memories", error.message);
+        return res.status(500).json({
+            error: "Failed to retrieve memories"
+        });
     }
 } 
