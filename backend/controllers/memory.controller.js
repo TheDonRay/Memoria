@@ -1,7 +1,8 @@
 import { getAuth } from '@clerk/express';
 // import the service file here
 import { createMemoryService } from '../services/memory.service.js';
-import { retrieveUsrMemoryService } from '../services/memory.service.js'; 
+import { retrieveUsrMemoryService } from '../services/memory.service.js';  
+import { retrieveSpecificMemoryService } from '../services/memory.service.js'; 
 
 export const createMemoryController = async (req, res) => {
     //set up try and catch case and call service file with the userId
@@ -51,3 +52,9 @@ export const retrieveUsrMemoryController = async (req, res) => {
         });
     }
 } 
+ 
+
+export const retrieveSpecificMemoryController = async (req, res) => { 
+    // get the id and req send it off to the service route to search by that specific Id that the user finds. 
+}; 
+
