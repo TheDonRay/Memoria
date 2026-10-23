@@ -55,6 +55,33 @@ export const retrieveUsrMemoryController = async (req, res) => {
  
 
 export const retrieveSpecificMemoryController = async (req, res) => { 
-    // get the id and req send it off to the service route to search by that specific Id that the user finds. 
+    // get the id and req send it off to the service route to search by that specific Id that the user finds.  
+    try { 
+        const {userId} = getAuth(req); 
+        // get the specific memory id from the parameter (/memories/:id), this is the memory's _id not the user's id
+        const memoryId = req.params.id;
+
+        const memory = await retrieveSpecificMemoryService(userId, memoryId);
+
+        // null means it doesn't exist or belongs to another user, both get a 404 so we don't reveal other users' memories
+        if (!memory) {
+            return res.status(404).json({
+                error: "Memory not found"
+            });
+        }
+        return res.status(200).json(memory);
+
+    } catch (error) {
+        // CastError means the id isn't a valid MongoDB ObjectId (e.g. /memories/abc)
+        if (error.name === 'CastError') {
+            return res.status(400).json({
+                error: "Invalid memory id"
+            });
+        }
+        console.error("Error retrieving memory", error.message);
+        return res.status(500).json({
+            error: "Failed to retrieve memory"
+        });
+    }
 }; 
 
