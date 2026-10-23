@@ -16,3 +16,11 @@ export const retrieveSpecificMemoryService = async (userId, memoryId) => {
     // matching on both _id and userId means users can only get their own memories (returns null otherwise)
     return Memory.findOne({ _id: memoryId, userId });
 }
+
+export const deleteMemoryService = async (userId, memoryId) => {
+    // matching on BOTH _id and userId means a user can only delete their own memories
+    // one atomic database call: finds and deletes in the same step, no separate "find then delete"
+    // returns the deleted document (useful later to get its imageURL for storage cleanup), or null if nothing matched
+    // no try/catch here, errors bubble up to the controller like the other services
+    return Memory.findOneAndDelete({ _id: memoryId, userId });
+};

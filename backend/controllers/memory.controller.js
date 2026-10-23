@@ -2,7 +2,8 @@ import { getAuth } from '@clerk/express';
 // import the service file here
 import { createMemoryService } from '../services/memory.service.js';
 import { retrieveUsrMemoryService } from '../services/memory.service.js';  
-import { retrieveSpecificMemoryService } from '../services/memory.service.js'; 
+import { retrieveSpecificMemoryService } from '../services/memory.service.js';
+import { deleteMemoryService } from '../services/memory.service.js';
 
 export const createMemoryController = async (req, res) => {
     //set up try and catch case and call service file with the userId
@@ -85,3 +86,39 @@ export const retrieveSpecificMemoryController = async (req, res) => {
     }
 }; 
 
+
+// delete one of the signed in user's memories: DELETE /memories/:id
+export const deleteMemoryController = async (req, res) => {
+    try {
+        // WHO is deleting (from the token) and WHICH memory (from the url)
+        const {userId} = getAuth(req);
+        const memoryId = req.params.id;
+
+        const deletedMemory = await deleteMemoryService(userId, memoryId);
+
+        // null covers both "doesn't exist" and "belongs to someone else", same 404 so we don't leak other users' memories
+        if (!deletedMemory) {
+            return res.status(404).json({
+                error: "Memory not found"
+            });
+        }
+
+        // LATER (once image uploads exist): also delete the image from Cloudinary/S3 using deletedMemory.imageURL,
+        // if that cleanup fails just log it, the memory is already gone so still respond 200
+        return res.status(200).json({
+            message: "Memory deleted",
+            id: memoryId
+        });
+    } catch (error) {
+        // CastError means the id isn't a valid MongoDB ObjectId (e.g. /memories/abc)
+        if (error.name === 'CastError') {
+            return res.status(400).json({
+                error: "Invalid memory id"
+            });
+        }
+        console.error("Error deleting memory", error.message);
+        return res.status(500).json({
+            error: "Failed to delete memory"
+        });
+    }
+};
