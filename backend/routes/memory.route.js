@@ -18,11 +18,7 @@ userMemories.post("/memories", requireUserAuth, createMemoryController);
 userMemories.get("/yourmemories", requireUserAuth, retrieveUsrMemoryController);
 
 // this route is to get a specific user's memories here as such
-userMemories.get(
-  "/memories/:id",
-  requireUserAuth,
-  retrieveSpecificMemoryController,
-);
+userMemories.get("/memories/:id", requireUserAuth, retrieveSpecificMemoryController);
 
 // delete route: lets a user delete one of their own memories
 // same path as the get-one route, the HTTP method (DELETE vs GET) tells them apart

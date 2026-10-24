@@ -4,7 +4,21 @@ import mongoose from "mongoose";
 const pointSchema = new mongoose.Schema(
   {
     type: { type: String, enum: ["Point"], required: true },
-    coordinates: { type: [Number], required: true }, // [lng, lat]
+    coordinates: {
+      type: [Number], // [lng, lat]
+      required: true,
+      // checked here so bad points become a 400 ValidationError instead of a 500 from the 2dsphere index
+      // (required alone isn't enough: mongoose defaults arrays to [], which passes required)
+      validate: {
+        validator: (coords) =>
+          coords.length === 2 &&
+          coords[0] >= -180 &&
+          coords[0] <= 180 &&
+          coords[1] >= -90 &&
+          coords[1] <= 90,
+        message: "coordinates must be [lng, lat] with lng between -180 and 180 and lat between -90 and 90",
+      },
+    },
   },
   { _id: false },
 );
