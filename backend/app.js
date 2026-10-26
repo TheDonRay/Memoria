@@ -19,6 +19,8 @@ app.use(clerkMiddleware());
 import userInfoRoute from "./routes/userinfo.route.js";
 // upload memory route
 import userMemories from "./routes/memory.route.js";
+// upload signature route
+import uploadRoute from "./routes/upload.route.js";
 
 // default route set up
 app.get("/Welcome", (req, res) => {
@@ -30,5 +32,6 @@ app.get("/Welcome", (req, res) => {
 //mount on routes
 app.use("/api/v1", userInfoRoute);
 app.use("/api/v1", userMemories);
+app.use("/api/v1", uploadRoute);
 
 export default app;
