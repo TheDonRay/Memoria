@@ -1,0 +1,30 @@
+/* Pulls in the all the Tailwind styles so the class name actually works */
+@import "tailwindcss";
+
+/* our design system from Figma, saved once so every page matches */
+@theme {
+  /* colors: gives us bg-night, text-ink, bg-flash, and so on */
+  --color-night: #0b1f1a;
+  --color-dots: #5e8f82;
+  --color-flash: #ffd23f;
+  --color-mist: #e8edea;
+  --color-ink: #101414;
+  --color-teal: #1f6f6b;
+  --color-print: #fafaf7;
+
+  /* fonts: gives us font-display, font-body, font-mono */
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-body: "Work Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* hard shadows with no blur, like in the Figma */
+  --shadow-polaroid: 4px 4px 0 rgba(16, 20, 20, 0.25);
+  --shadow-button: 3px 3px 0 #101414;
+}
+
+/* every page starts with the same background, font, and text color */
+body {
+  background-color: var(--color-mist);
+  font-family: var(--font-body);
+  color: var(--color-ink);
+}
