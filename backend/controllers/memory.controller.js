@@ -5,6 +5,7 @@ import { retrieveUsrMemoryService } from "../services/memory.service.js";
 import { retrieveSpecificMemoryService } from "../services/memory.service.js";
 import { deleteMemoryService } from "../services/memory.service.js";
 import { updateMemoryService } from "../services/memory.service.js";
+import { deleteImageService } from "../services/storage.service.js";
 
 // fields a user is allowed to edit after creating a memory
 // imageURL and imageKey are left out (a new photo should be a new memory), userId and captionStatus are controlled by the server
@@ -131,8 +132,20 @@ export const deleteMemoryController = async (req, res) => {
       });
     }
 
-    // LATER (once image uploads exist): also delete the image from Cloudinary/S3 using deletedMemory.imageURL,
-    // if that cleanup fails just log it, the memory is already gone so still respond 200
+    // also delete the photo from cloudinary (older memories made before uploads have no imageKey, so skip those)
+    // database first, cloudinary second: if this cleanup fails the memory is still gone, so just log it and still respond 200
+    if (deletedMemory.imageKey) {
+      try {
+        const result = await deleteImageService(deletedMemory.imageKey);
+        // destroy doesn't throw for a missing image, it returns { result: "not found" }
+        if (result.result !== "ok") {
+          console.warn("Cloudinary image not deleted", deletedMemory.imageKey, result.result);
+        } 
+      } catch (error) {
+        console.error("Error deleting image from Cloudinary", deletedMemory.imageKey, error.message);
+      }
+    }
+
     return res.status(200).json({
       message: "Memory deleted",
       id: memoryId,
