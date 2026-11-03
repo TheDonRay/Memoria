@@ -35,6 +35,11 @@ const memoriaSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    // Cloudinary public_id, used to verify ownership and delete the image
+    imageKey: {
+      type: String,
+      required: true,
+    },
     note: String,
     caption: String,
     captionStatus: {

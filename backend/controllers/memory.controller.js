@@ -7,7 +7,7 @@ import { deleteMemoryService } from "../services/memory.service.js";
 import { updateMemoryService } from "../services/memory.service.js";
 
 // fields a user is allowed to edit after creating a memory
-// imageURL is left out (a new photo should be a new memory), userId and captionStatus are controlled by the server
+// imageURL and imageKey are left out (a new photo should be a new memory), userId and captionStatus are controlled by the server
 const EDITABLE_FIELDS = ["note", "caption", "takenAt", "location", "placeName"];
 
 export const createMemoryController = async (req, res) => {
@@ -16,17 +16,36 @@ export const createMemoryController = async (req, res) => {
     // userId comes from the verified token (requireUserAuth already blocked unsigned users)
     const { userId } = getAuth(req);
     // captionStatus is left out on purpose, the server controls it (defaults to "pending")
-    const { imageURL, note, caption, takenAt, location, placeName } = req.body;
+    const { imageURL, imageKey, note, caption, takenAt, location, placeName } = req.body;
 
-    if (!imageURL) {
+    // typeof also catches missing values, and stops objects from crashing .startsWith() below
+    if (typeof imageURL !== "string" || typeof imageKey !== "string") {
       return res.status(400).json({
-        error: "imageURL is required",
+        error: "imageURL and imageKey are required",
+      });
+    }
+
+    // the upload signature locks uploads to memoria/<userId>, so a key outside that folder isn't this user's image
+    // the name part after the folder can only be letters, numbers, _ or -, so tricks like "memoria/<userId>/../<otherUser>/x" are rejected
+    const isOwnKey = new RegExp(`^memoria/${userId}/[A-Za-z0-9_-]+$`).test(imageKey);
+    if (!isOwnKey) {
+      return res.status(403).json({
+        error: "Image does not belong to this user",
+      });
+    }
+
+    // the url has to point at our cloudinary account and be the same image as the key
+    const cloudinaryPrefix = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/`;
+    if (!imageURL.startsWith(cloudinaryPrefix) || !imageURL.includes(`/${imageKey}.`)) {
+      return res.status(400).json({
+        error: "imageURL does not match imageKey",
       });
     }
 
     // call our service function with this data
     const newMemory = await createMemoryService(userId, {
       imageURL,
+      imageKey,
       note,
       caption,
       takenAt,
