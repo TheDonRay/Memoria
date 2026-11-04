@@ -69,14 +69,62 @@ export const createMemoryController = async (req, res) => {
   }
 };
 
-// retrieve user memory information here as such
+// timeline page sizes: default when the client doesn't ask, and the most one request can get
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 50;
+
+// the cursor is "takenAt|_id" of the last memory on a page, base64url encoded so it's one url-safe string
+// the frontend never reads it, it just sends back whatever nextCursor it got
+const encodeCursor = (memory) =>
+  Buffer.from(`${memory.takenAt.toISOString()}|${memory._id}`).toString("base64url");
+
+// returns { takenAt, id } or null if the cursor was tampered with / malformed
+const decodeCursor = (cursor) => {
+  const [takenAtText, id] = Buffer.from(cursor, "base64url").toString("utf8").split("|");
+  const takenAt = new Date(takenAtText);
+  if (Number.isNaN(takenAt.getTime()) || !/^[a-f0-9]{24}$/.test(id ?? "")) return null;
+  return { takenAt, id };
+};
+
+// retrieve one page of the user's timeline: GET /yourmemories?limit=20&cursor=<nextCursor from the last page>
 export const retrieveUsrMemoryController = async (req, res) => {
   try {
     // start of with req userId and go into retrieving a user's specific data using their userId
     const { userId } = getAuth(req);
-    // call the service function.
-    const memories = await retrieveUsrMemoryService(userId);
-    return res.status(200).json(memories);
+
+    // limit: optional, has to be a whole number 1 or more, capped so nobody can ask for everything at once
+    let limit = DEFAULT_PAGE_SIZE;
+    if (req.query.limit !== undefined) { 
+      // remeber query reads in a string so we convert it into a number. 
+      limit = Number(req.query.limit);
+      if (!Number.isInteger(limit) || limit < 1) {
+        return res.status(400).json({
+          error: "limit must be a whole number of 1 or more",
+        });
+      }
+      limit = Math.min(limit, MAX_PAGE_SIZE);
+    }
+
+    // cursor: optional, no cursor means the first page
+    let cursor;
+    if (req.query.cursor !== undefined) {
+      cursor = typeof req.query.cursor === "string" ? decodeCursor(req.query.cursor) : null;
+      if (!cursor) {
+        return res.status(400).json({
+          error: "Invalid cursor",
+        });
+      }
+    }
+
+    // the service fetches limit + 1, an extra one coming back means there's another page
+    const results = await retrieveUsrMemoryService(userId, { limit, cursor });
+    const hasMore = results.length > limit;
+    const memories = hasMore ? results.slice(0, limit) : results;
+
+    // next page continues after the last memory we're sending, null means the user reached the end
+    const nextCursor = hasMore ? encodeCursor(memories[memories.length - 1]) : null;
+
+    return res.status(200).json({ memories, nextCursor });
   } catch (error) {
     // a GET has no body to validate, so any error here is a server error
     console.error("Error retrieving memories", error.message);
