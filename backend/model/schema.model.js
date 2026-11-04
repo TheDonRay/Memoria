@@ -47,7 +47,11 @@ const memoriaSchema = new mongoose.Schema(
       enum: ["pending", "failed", "done"],
       default: "pending",
     },
-    takenAt: Date,
+    takenAt: { 
+      type: Date, 
+      required: true, 
+      default: Date.now
+    }, 
     location: { type: pointSchema, default: undefined }, // GeoJSON { type: 'Point', coordinates: [lng, lat] }
     placeName: String,
   },
