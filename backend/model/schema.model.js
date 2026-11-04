@@ -59,7 +59,7 @@ const memoriaSchema = new mongoose.Schema(
 );
 
 memoriaSchema.index({ location: "2dsphere" }); // globe queries
-memoriaSchema.index({ userId: 1, takenAt: -1 }); // timeline: a user's memories by date
+memoriaSchema.index({ userId: 1, takenAt: -1, _id: -1 }); // timeline pagination: a user's memories newest first, _id breaks ties
 
 const Memory = mongoose.model("Memory", memoriaSchema);
 

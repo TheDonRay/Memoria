@@ -6,9 +6,25 @@ export const createMemoryService = async (userId, data) => {
   return Memory.create({ ...data, userId });
 };
 
-export const retrieveUsrMemoryService = async (userId) => {
-  // call database and use .find method on userId to get data, newest first (createdAt breaks ties / covers missing takenAt)
-  return Memory.find({ userId }).sort({ takenAt: -1, createdAt: -1 });
+// one page of a user's timeline, newest first
+// cursor = { takenAt, id } of the last memory on the previous page (the controller decodes it), none for the first page
+export const retrieveUsrMemoryService = async (userId, { limit = 20, cursor } = {}) => {
+  const filter = { userId };
+
+  if (cursor) {
+    // only memories that come AFTER the cursor in the sort order:
+    // taken earlier, or taken at the exact same time with a smaller _id (the tie-breaker)
+    filter.$or = [
+      { takenAt: { $lt: cursor.takenAt } },
+      { takenAt: cursor.takenAt, _id: { $lt: cursor.id } },
+    ];
+  }
+
+  // sort matches the { userId, takenAt, _id } index exactly, so mongodb reads the page straight from the index
+  // fetch one extra: if it comes back there's another page (the controller drops it before responding)
+  return Memory.find(filter)
+    .sort({ takenAt: -1, _id: -1 })
+    .limit(limit + 1);
 };
 
 export const retrieveSpecificMemoryService = async (userId, memoryId) => {
