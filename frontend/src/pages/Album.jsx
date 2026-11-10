@@ -61,7 +61,7 @@ export default function Album() {
       ) : (
         <>
           {/* filter row */}
-          <div className="mt-8 flex items-center gap-4 border-y border-ink/10 py-4">
+          <div className="mt-8 flex flex-wrap items-center gap-4 border-y border-ink/10 py-4">
             <select
               className={selectClass}
               value={year}
@@ -87,23 +87,23 @@ export default function Album() {
               ))}
             </select>
             <span className="ml-auto font-mono text-xs text-ink/60">
-              {filtered.length} memories
+              {filtered.length} {filtered.length === 1 ? 'memory' : 'memories'}
             </span>
           </div>
 
           {/* month columns side by side (scrolls sideways if there are many) */}
           <div className="mt-10 flex gap-12 overflow-x-auto pb-6">
             {groups.map((group) => (
-              <section key={group.key} className="min-w-[360px] flex-1">
+              <section key={group.key} className="min-w-[300px] flex-1 sm:min-[360px]">
                 <h2 className="font-display text-3xl font-bold">
                   {group.label}
                 </h2>
                 <p className="mt-1 font-mono text-[11px] text-ink/50">
-                  {group.items.length} memories
+                  {group.items.length} {group.items.length === 1 ? 'memory' : 'memories'}
                 </p>
 
                 {/* two polaroids per row inside each month */}
-                <div className="mt-6 grid grid-cols-2 gap-6">
+                <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-8 [&>*:nth-child(even)]:mt-8">
                   {group.items.map((m) => (
                     <Link key={m.id} to={`/memory/${m.id}`}>
                       <Polaroid memory={m} />

@@ -16,24 +16,35 @@ const links = [
   { to: '/search', label: 'Search' },
 ]
 
-// variant "dark" is for the Home page, "light" is for all the others
-export default function Navbar({ variant = 'light' }) {
+// variant "dark" is for the home page and "light" will be for the other pages
+// bare: this makes it ahve no full-width bars, so it can sit inside the home globe panel
+// showAccount: false will hide the sign in or avatar, it'll show in the home on the right panel.
+export default function Navbar({
+  variant = 'light',
+  bare = false,
+  showAccount = true,
+}) {
   const dark = variant === 'dark'
 
+  const navClass = bare
+    ? ''
+    : dark
+      ? 'bg-night text-print'
+      : 'border-b border-ink/10 text-ink'
+
+  const innerClass = bare
+    ? 'flex flex-wrap items-center justify-between gap-x-8 gap-y-3'
+    : 'mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-x-8 gap-y-3 px-5 py-5 md:px-16 md:py-6'
+
   return (
-    <nav
-      className={
-        dark ? 'bg-night text-print' : 'border-b border-ink/10 text-ink'
-      }
-    >
-      {/* inner box keeps the bar the same width as the page content */}
-      <div className="mx-auto flex max-w-[1440px] items-center justify-between px-16 py-6">
+    <nav className={navClass}>
+      <div className={innerClass}>
         {/* wordmark, always says Memoria and goes home */}
         <NavLink to="/" className="font-display text-2xl font-bold">
           Memoria
         </NavLink>
 
-        <div className="flex items-center gap-8">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 md:gap-x-8">
           {links.map((link) => (
             <NavLink
               key={link.to}
@@ -53,14 +64,18 @@ export default function Navbar({ variant = 'light' }) {
             </NavLink>
           ))}
 
-          <SignedOut>
-            <SignInButton mode="modal">
-              <button className="text-sm font-medium">Sign in</button>
-            </SignInButton>
-          </SignedOut>
-          <SignedIn>
-            <UserButton />
-          </SignedIn>
+          {showAccount && (
+            <>
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <button className="text-sm font-medium">Sign in</button>
+                </SignInButton>
+              </SignedOut>
+              <SignedIn>
+                <UserButton />
+              </SignedIn>
+            </>
+          )}
         </div>
       </div>
     </nav>

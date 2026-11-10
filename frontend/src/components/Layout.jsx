@@ -8,21 +8,28 @@ import Navbar from './Navbar'
 export default function Layout({ children }) {
   const { pathname } = useLocation()
   const isHome = pathname === '/'
+  const isLogin = pathname.toLowerCase().startsWith('/login')
+  const isDetail = pathname.startsWith('/memory/')
+
+// Home and Login have no shared navbar
+if (isHome || isLogin) {
+  return <main className="min-h-screen bg-mist">{children}</main>
+}
 
   return (
     <div className="min-h-screen bg-mist">
       {/* dark navbar on Home and light navbar everywhere else */}
-      <Navbar variant={isHome ? 'dark' : 'light'} />
+      <Navbar variant = "light" />
 
-      {isHome ? (
-        //Home controls its own layout since it has the globe and the side panel
+      {isDetail ? (
+        // full width with no padding
         <main>{children}</main>
       ) : (
-        // all other pages have the same width and padding
-        <main className="mx-auto w-full max-w-[1440px] px-16 py-12">
+        // all other pages will have the same width and padding
+        <main className="mx-auto w-full max-w-[1440px] px-5 py-8 md:px-16 md:py-12">
           {children}
         </main>
       )}
-    </div>
+      </div>
   )
 }
