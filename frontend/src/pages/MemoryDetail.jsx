@@ -71,9 +71,9 @@ export default function MemoryDetail() {
     }
   }
   return (
-    <div className="grid min-h-[640px] grid-cols-2">
+    <div className="grid min-h-[calc(100vh-80px)] lg:grid-cols-2">
       {/* LEFT: big polaroid on the dark panel */}
-      <div className="flex flex-col justify-between bg-night p-12">
+      <div className="flex flex-col justify-between gap-8 bg-night p-6 md:p-12">
         <Link to="/album" className="text-sm text-print/70 hover:text-print">
           ← All memories
         </Link>
@@ -84,7 +84,7 @@ export default function MemoryDetail() {
       </div>
 
       {/* RIGHT: the details */}
-      <div className="bg-print p-12">
+      <div className="bg-print p-6 md:p-12">
         {editing ? (
           // EDIT MODE
           <div className="space-y-5">
@@ -143,7 +143,7 @@ export default function MemoryDetail() {
           // READ MODE
           <>
             <p className={labelClass}>A place to remember</p>
-            <h1 className="mt-4 font-display text-7xl font-bold leading-none">
+            <h1 className="mt-4 font-display text-5xl font-bold leading-none md:text-7xl">
               {memory.place}
             </h1>
 

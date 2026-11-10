@@ -96,7 +96,7 @@ export default function Search() {
           </EmptyState>
         </div>
       ) : (
-        <div className="mt-10 grid grid-cols-[240px_1fr] gap-12">
+        <div className="mt-10 grid grid-cols-1 gap-12 lg:grid-cols-[240px_1fr]">
           {/* LEFT: filters */}
           <aside className="space-y-6">
             <label className="block">
@@ -179,7 +179,7 @@ export default function Search() {
                 No memories match. Try fewer filters.
               </p>
             ) : (
-              <div className="mt-6 grid grid-cols-3 gap-8">
+              <div className="mt-6 grid grid-cols-1 gap-8 sm:grid-cols-2 xl:grid-cols-3">
                 {results.map((m) => (
                   <Link key={m.id} to={`/memory/${m.id}`} className="block">
                     <Polaroid memory={m} />

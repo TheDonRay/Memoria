@@ -4,7 +4,7 @@
 /* our design system from Figma, saved once so every page matches */
 @theme {
   /* colors: gives us bg-night, text-ink, bg-flash, and so on */
-  --color-night: #0b1f1a;
+  --color-night: #05231d;
   --color-dots: #5e8f82;
   --color-flash: #ffd23f;
   --color-mist: #e8edea;

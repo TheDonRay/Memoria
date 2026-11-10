@@ -7,6 +7,7 @@ import MemoryDetail from './pages/MemoryDetail'
 import Album from './pages/Album'
 import Search from './pages/Search'
 import ProtectedRoute from './components/ProtectedRoute'
+import Login from './pages/Login'
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
     <Layout>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/login/*" element={<Login />} />
         <Route
           path="/upload"
           element={

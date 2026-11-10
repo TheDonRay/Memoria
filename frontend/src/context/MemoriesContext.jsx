@@ -6,6 +6,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 import { useApi } from '../lib/useApi'
+import { DEMO_MODE, demoMemories } from '../lib/demoMemories'
 
 // The shared box that will hold the memories
 const MemoriesContext = createContext(null)
@@ -106,11 +107,16 @@ export function MemoriesProvider({ children }) {
     await api(`/memories/${id}`, { method: 'DELETE' })
     setMemories((previous) => previous.filter((m) => m.id !== id))
   }
-
+// demo mode (VITE_DEMO=true) and nothing real saved yet, this is the sample memories
+  const showDemo = DEMO_MODE && memories.length === 0
   // Hand everything to the pages
   return (
     <MemoriesContext.Provider
-      value={{ memories, loading, addMemory, updateMemory, deleteMemory }}
+      value={{ memories: showDemo ? demoMemories : memories,
+               loading: showDemo ? false : loading,
+               addMemory,
+               updateMemory,
+               deleteMemory, }}
     >
       {children}
     </MemoriesContext.Provider>

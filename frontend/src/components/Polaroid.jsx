@@ -16,7 +16,7 @@ export default function Polaroid({
     <figure
       style={{ transform: `rotate(${rotate}deg)` }}
       // thick off-white border + hard shadow with no blur (THIS IS FROM FIGMA)
-      className={`bg-print ${
+      className={`bg-print text-ink ${
         compact
           ? 'p-1 shadow-[2px_2px_0_rgba(16,20,20,0.25)]'
           : 'p-3 pb-4 shadow-polaroid'
@@ -26,7 +26,11 @@ export default function Polaroid({
       <img
         src={memory.imageUrl}
         alt={memory.caption || memory.place}
-        className="aspect-square w-full object-cover"
+        className="aspect-square w-full bg-mist object-cover"
+        // a broken link shows an empty print instead of the broken image icon
+        onError={(e) => {
+          e.currentTarget.style.visibility = 'hidden'
+        }}
       />
       {/* Taller bottom stirp with place + the date (hidden in compact mode) */}
       {!compact && (
