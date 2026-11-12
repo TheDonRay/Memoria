@@ -86,13 +86,13 @@ export default function Home() {
               <UserButton />
             </SignedIn>
             <SignedOut>
-              <Link to="/login" className="text-sm font-medium underline">
+              <Link to="/login" className="py-2 text-sm font-medium underline">
                 Sign in
               </Link>
             </SignedOut>
           </div>
 
-          <h2 className="mt-10 font-display text-6xl font-bold leading-none">
+          <h2 className="mt-8 font-display text-5xl font-bold leading-none md:mt-10 md:text-6xl">
             Memories.
           </h2>
           <p className="mt-3 text-sm text-ink/60">Little things, kept close.</p>
@@ -113,7 +113,7 @@ export default function Home() {
                         className="h-16 w-16 shrink-0 bg-ink/10 object-cover"
                       />
                       <div className="min-w-0">
-                        <p className="font-medium leading-snug">
+                        <p className="break-words font-medium leading-snug">
                           {m.caption || m.place}
                         </p>
                         <p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-teal">
@@ -129,7 +129,9 @@ export default function Home() {
         </div>
 
         {/* button stays at the bottom of the panel */}
-        <div className="sticky bottom-0 bg-mist px-6 pb-6 pt-4 md:px-10">
+        {/* only sticky on desktop, where the panel scrolls on its own.
+            On phones a sticky bar here would cover the sign in row and the heading. */}
+        <div className="bg-mist px-6 pb-6 pt-4 md:px-10 lg:sticky lg:bottom-0">
           <Link
             to="/upload"
             className="flex items-center justify-center gap-2 border-2 border-ink bg-print py-3 text-sm font-medium shadow-button"

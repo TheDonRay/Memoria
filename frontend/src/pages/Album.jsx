@@ -1,5 +1,5 @@
 // PAGE: /album
-// Memories are grouped by month, months side by side.
+// Memories are grouped by month, months side by side (stacked on phones).
 // FILTERS: Year and Place
 // Both filters are lists and are built from the user's real data.
 
@@ -10,9 +10,13 @@ import { groupByMonth } from '../lib/group'
 import Polaroid from '../components/Polaroid'
 import EmptyState from '../components/EmptyState'
 import Loading from '../components/Loading'
-import { primaryButton } from '../lib/styles'
-
-const selectClass = 'border border-ink/20 bg-print px-3 py-2 text-sm'
+import {
+  filterClass,
+  labelClass,
+  pageTitle,
+  primaryButton,
+  textButton,
+} from '../lib/styles'
 
 export default function Album() {
   const { memories, loading } = useMemories()
@@ -33,10 +37,8 @@ export default function Album() {
 
   return (
     <div>
-      <p className="font-mono text-[11px] uppercase tracking-wider text-ink/60">
-        Collected along the way
-      </p>
-      <h1 className="mt-2 font-display text-5xl font-bold">Album</h1>
+      <p className={labelClass}>Collected along the way</p>
+      <h1 className={`mt-2 ${pageTitle}`}>Album</h1>
       <p className="mt-2 text-ink/60">Days that passed. Moments that stayed.</p>
 
       {loading ? (
@@ -61,9 +63,10 @@ export default function Album() {
       ) : (
         <>
           {/* filter row */}
-          <div className="mt-8 flex flex-wrap items-center gap-4 border-y border-ink/10 py-4">
+          <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-3 border-y border-ink/10 py-4">
             <select
-              className={selectClass}
+              aria-label="Filter by year"
+              className={filterClass}
               value={year}
               onChange={(e) => setYear(e.target.value)}
             >
@@ -74,8 +77,10 @@ export default function Album() {
                 </option>
               ))}
             </select>
+            {/* max-w-full + truncate so a very long place name can't push the row off screen */}
             <select
-              className={selectClass}
+              aria-label="Filter by place"
+              className={`max-w-full truncate ${filterClass}`}
               value={place}
               onChange={(e) => setPlace(e.target.value)}
             >
@@ -91,28 +96,46 @@ export default function Album() {
             </span>
           </div>
 
-          {/* month columns side by side (scrolls sideways if there are many) */}
-          <div className="mt-10 flex gap-12 overflow-x-auto pb-6">
-            {groups.map((group) => (
-              <section key={group.key} className="min-w-[300px] flex-1 sm:min-[360px]">
-                <h2 className="font-display text-3xl font-bold">
-                  {group.label}
-                </h2>
-                <p className="mt-1 font-mono text-[11px] text-ink/50">
-                  {group.items.length} {group.items.length === 1 ? 'memory' : 'memories'}
-                </p>
+          {groups.length === 0 ? (
+            // both filters together can match nothing (ex: a place you never visited that year)
+            <div className="mt-10">
+              <p className="text-ink/60">No memories match these filters.</p>
+              <button
+                onClick={() => {
+                  setYear('')
+                  setPlace('')
+                }}
+                className={textButton}
+              >
+                Reset filters
+              </button>
+            </div>
+          ) : (
+            // PHONES: months stacked, you scroll down
+            // TABLET AND UP: month columns side by side (scrolls sideways if there are many)
+            <div className="mt-10 flex flex-col gap-12 md:flex-row md:overflow-x-auto md:pb-6">
+              {groups.map((group) => (
+                <section key={group.key} className="md:min-w-[320px] md:flex-1">
+                  <h2 className="font-display text-3xl font-bold">
+                    {group.label}
+                  </h2>
+                  <p className="mt-1 font-mono text-[11px] text-ink/50">
+                    {group.items.length}{' '}
+                    {group.items.length === 1 ? 'memory' : 'memories'}
+                  </p>
 
-                {/* two polaroids per row inside each month */}
-                <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-8 [&>*:nth-child(even)]:mt-8">
-                  {group.items.map((m) => (
-                    <Link key={m.id} to={`/memory/${m.id}`}>
-                      <Polaroid memory={m} />
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
+                  {/* two polaroids per row inside each month */}
+                  <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-8 [&>*:nth-child(even)]:mt-8">
+                    {group.items.map((m) => (
+                      <Link key={m.id} to={`/memory/${m.id}`}>
+                        <Polaroid memory={m} />
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
         </>
       )}
     </div>

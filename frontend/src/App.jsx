@@ -1,6 +1,8 @@
 // Routes and Route decdie which page to show for each of the URL
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Link } from 'react-router-dom'
 import Layout from './components/Layout'
+import EmptyState from './components/EmptyState'
+import { textButton } from './lib/styles'
 import Home from './pages/Home'
 import Upload from './pages/Upload'
 import MemoryDetail from './pages/MemoryDetail'
@@ -47,6 +49,20 @@ export default function App() {
             <ProtectedRoute>
               <Search />
             </ProtectedRoute>
+          }
+        />
+        {/* "*" catches every URL that isn't listed above, so a typo isn't a blank page */}
+        <Route
+          path="*"
+          element={
+            <EmptyState
+              title="Page not found"
+              text="There is nothing at this address."
+            >
+              <Link to="/" className={`inline-block ${textButton}`}>
+                Back to home
+              </Link>
+            </EmptyState>
           }
         />
       </Routes>

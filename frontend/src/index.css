@@ -28,3 +28,25 @@ body {
   font-family: var(--font-body);
   color: var(--color-ink);
 }
+
+@layer base {
+  /* Tailwind 4 gives buttons the normal arrow cursor, so make them match links */
+  button:not(:disabled),
+  select,
+  [role='button'] {
+    cursor: pointer;
+  }
+
+  /* the same keyboard focus ring on everything you can tab to */
+  :focus-visible {
+    outline: 2px solid var(--color-teal);
+    outline-offset: 2px;
+  }
+
+  /* checkboxes use the brand color instead of the browser blue */
+  input[type='checkbox'] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--color-teal);
+  }
+}

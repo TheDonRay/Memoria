@@ -1,12 +1,7 @@
 // NavLink is like a normal link, but it knows when it's the current page
-import { NavLink } from 'react-router-dom'
-// Sign in button for the NavBar
-import {
-  SignedIn,
-  SignedOut,
-  SignInButton,
-  UserButton,
-} from '@clerk/clerk-react'
+import { Link, NavLink } from 'react-router-dom'
+// Sign in link / avatar for the NavBar
+import { SignedIn, SignedOut, UserButton } from '@clerk/clerk-react'
 
 // the same four links on every page
 const links = [
@@ -32,9 +27,12 @@ export default function Navbar({
       ? 'bg-night text-print'
       : 'border-b border-ink/10 text-ink'
 
+  // PHONES: wordmark + account on the first row, the four links on the second row
+  // DESKTOP: everything on one row
+  const rowClass = 'flex flex-wrap items-center justify-between gap-x-8 gap-y-1'
   const innerClass = bare
-    ? 'flex flex-wrap items-center justify-between gap-x-8 gap-y-3'
-    : 'mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-x-8 gap-y-3 px-5 py-5 md:px-16 md:py-6'
+    ? rowClass
+    : `mx-auto max-w-[1440px] px-6 py-4 md:px-16 md:py-5 ${rowClass}`
 
   return (
     <nav className={navClass}>
@@ -44,7 +42,8 @@ export default function Navbar({
           Memoria
         </NavLink>
 
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 md:gap-x-8">
+        {/* order-3 + w-full drops the links onto their own row on phones */}
+        <div className="order-3 flex w-full items-center gap-x-6 md:order-2 md:ml-auto md:w-auto md:gap-x-8">
           {links.map((link) => (
             <NavLink
               key={link.to}
@@ -52,8 +51,9 @@ export default function Navbar({
               // "end" so Home only lights up on the exact home page
               end
               // the current page gets the yellow underline
+              // py-2 makes the link tall enough to tap with a thumb
               className={({ isActive }) =>
-                `border-b-2 pb-1 text-sm ${
+                `border-b-2 py-2 text-sm ${
                   isActive
                     ? 'border-flash font-medium'
                     : 'border-transparent opacity-70 hover:opacity-100'
@@ -63,20 +63,21 @@ export default function Navbar({
               {link.label}
             </NavLink>
           ))}
-
-          {showAccount && (
-            <>
-              <SignedOut>
-                <SignInButton mode="modal">
-                  <button className="text-sm font-medium">Sign in</button>
-                </SignInButton>
-              </SignedOut>
-              <SignedIn>
-                <UserButton />
-              </SignedIn>
-            </>
-          )}
         </div>
+
+        {showAccount && (
+          <div className="order-2 flex items-center md:order-3">
+            <SignedOut>
+              {/* same /login page the Home panel and the protected pages send you to */}
+              <Link to="/login" className="py-2 text-sm font-medium underline">
+                Sign in
+              </Link>
+            </SignedOut>
+            <SignedIn>
+              <UserButton />
+            </SignedIn>
+          </div>
+        )}
       </div>
     </nav>
   )

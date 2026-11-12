@@ -9,7 +9,7 @@ PROPS:
 
 export default function EmptyState({ title, text, example, children }) {
   return (
-    <div className="border-2 border-dashed border-ink/20 p-12">
+    <div className="border-2 border-dashed border-ink/20 p-6 md:p-12">
       <h2 className="font-display text-2xl font-bold">{title}</h2>
       <p className="mt-2 max-w-md text-ink/60">{text}</p>
 

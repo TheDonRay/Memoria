@@ -31,11 +31,15 @@ export default function Polaroid({
         onError={(e) => {
           e.currentTarget.style.visibility = 'hidden'
         }}
+        // show it again if a working photo loads later (ex: picking a new photo on Upload)
+        onLoad={(e) => {
+          e.currentTarget.style.visibility = 'visible'
+        }}
       />
       {/* Taller bottom stirp with place + the date (hidden in compact mode) */}
       {!compact && (
         <figcaption className="mt-3">
-          <p className="font-display text-lg font-bold leading-tight">
+          <p className="break-words font-display text-lg font-bold leading-tight">
             {memory.place}
           </p>
           <p className="mt-1 font-mono text-[10px] tracking-wider text-ink/60">

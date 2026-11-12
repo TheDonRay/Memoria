@@ -18,7 +18,13 @@ import { useMemories } from '../context/MemoriesContext'
 import { fileToDataUrl } from '../lib/resizeImage'
 import Polaroid from '../components/Polaroid'
 // This shares the same style for the form fields so they all match
-import { inputClass, labelClass, primaryButton } from '../lib/styles'
+import { formatCoords } from '../lib/format'
+import {
+  inputClass,
+  labelClass,
+  pageTitle,
+  primaryButton,
+} from '../lib/styles'
 
 export default function Upload() {
   const navigate = useNavigate()
@@ -46,7 +52,7 @@ export default function Upload() {
     try {
       setPhoto(await fileToDataUrl(file))
     } catch {
-      setError('Could not read that image. Try to JPG or PNG')
+      setError('Could not read that image. Try a JPG or PNG.')
       return
     }
 
@@ -118,23 +124,25 @@ export default function Upload() {
 
   return (
     <div>
-      <p className="font-mono text-[11px] uppercase tracking-wider text-ink/60">
-        A little moment, kept.
-      </p>
-      <h1 className="mt-2 font-display text-5xl font-bold">Upload a memory</h1>
+      <p className={labelClass}>A little moment, kept.</p>
+      <h1 className={`mt-2 ${pageTitle}`}>Upload a memory</h1>
       <p className="mt-2 text-ink/60">
         One photo, a few words. Something to come back to.
       </p>
 
-      <form onSubmit={handleSubmit} className="mt-10 grid grid-cols-2 gap-16">
-        {/* LEFT COLUMN: photo */}
-        <div>
+      {/* PHONES: photo on top, details underneath. TABLET AND UP: side by side */}
+      <form
+        onSubmit={handleSubmit}
+        className="mt-10 grid grid-cols-1 gap-10 md:grid-cols-2 md:gap-16"
+      >
+        {/* LEFT COLUMN: photo (min-w-0 so a wide child can't stretch the column) */}
+        <div className="min-w-0">
           <span className={labelClass}>Photo</span>
 
           {/* the drag-and-drop box */}
           <div
             {...getRootProps()}
-            className={`mt-2 flex h-64 cursor-pointer flex-col items-center justify-center border-2 border-dashed ${
+            className={`mt-2 flex h-48 cursor-pointer flex-col items-center justify-center border-2 border-dashed px-4 text-center md:h-64 ${
               isDragActive
                 ? 'border-ink bg-flash/20'
                 : 'border-ink/30 bg-print/60'
@@ -150,7 +158,7 @@ export default function Upload() {
 
           {/* live polaroid preview, updates as the user types */}
           {photo && (
-            <div className="mt-8 w-64">
+            <div className="mx-auto mt-8 w-64 max-w-full md:mx-0">
               <Polaroid
                 memory={{
                   id: 'preview',
@@ -165,7 +173,7 @@ export default function Upload() {
         </div>
 
         {/* RIGHT COLUMN: details */}
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <label className="block">
             <span className={labelClass}>Place</span>
             <input
@@ -186,6 +194,7 @@ export default function Upload() {
                   value={lat}
                   onChange={(e) => setLat(e.target.value)}
                   placeholder="optional"
+                  autoComplete="off"
                 />
               </label>
               <label className="block">
@@ -195,13 +204,18 @@ export default function Upload() {
                   value={lng}
                   onChange={(e) => setLng(e.target.value)}
                   placeholder="optional"
+                  autoComplete="off"
                 />
               </label>
             </div>
             <p className="mt-2 font-mono text-[11px] text-ink/50">
-              {detected
-                ? `detected from photo: ${lat} N, ${lng} E`
-                : 'No GPS found in the photo. Add coordinates to get a pin on the globe.'}
+              {!photo
+                ? // nothing dropped yet, so we can't say whether the photo has GPS or not
+                  'Optional. Add coordinates to get a pin on the globe.'
+                : detected
+                  ? // formatCoords picks N/S and E/W, so a western longitude doesn't show as "-9 E"
+                    `Detected from photo: ${formatCoords(parseFloat(lat), parseFloat(lng))}`
+                  : 'No GPS found in the photo. Add coordinates to get a pin on the globe.'}
             </p>
           </div>
 
@@ -242,7 +256,7 @@ export default function Upload() {
           <button
             type="submit"
             disabled={saving}
-            className={`px-6 py-3 disabled:opacity-60 ${primaryButton}`}
+            className={`w-full px-5 py-3 disabled:opacity-60 sm:w-auto ${primaryButton}`}
           >
             {saving ? 'Saving…' : 'Save memory'}
           </button>
