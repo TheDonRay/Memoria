@@ -2,10 +2,12 @@
 // Globe on the left
 // sign in form on the right
 
+import { Link } from 'react-router-dom'
 import { SignIn } from '@clerk/clerk-react'
-import { Lock } from 'lucide-react'
+import { ArrowLeft, Lock } from 'lucide-react'
 import GlobePanel from '../components/GlobePanel'
 import Polaroid from '../components/Polaroid'
+import { clerkAppearance } from '../lib/clerkAppearance'
 import lisbon from '../assets/examples/lisbon-alley.jpg'
 
 export default function Login() {
@@ -57,9 +59,16 @@ export default function Login() {
         <div className="flex flex-col bg-mist p-6 md:p-10">
           <div className="flex items-center justify-between">
             {/* on phones the left panel is hidden, so show the wordmark here */}
-            <span className="font-display text-2xl font-bold lg:hidden">
+            <Link to="/" className="font-display text-2xl font-bold lg:hidden">
               Memoria
-            </span>
+            </Link>
+            {/* the way back out of the page (desktop, where the wordmark is on the globe) */}
+            <Link
+              to="/"
+              className="-m-2 hidden items-center gap-2 p-2 text-sm font-medium underline-offset-4 hover:underline lg:inline-flex"
+            >
+              <ArrowLeft size={16} aria-hidden="true" /> Back to home
+            </Link>
             <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-teal">
               <Lock size={12} /> Personal journal
             </p>
@@ -77,29 +86,13 @@ export default function Login() {
               <SignIn
                 routing="path"
                 path="/login"
+                signUpUrl="/sign-up"
                 appearance={{
-                  variables: {
-                    colorPrimary: '#1f6f6b',
-                    colorBackground: '#e8edea',
-                    colorText: '#101414',
-                    borderRadius: '0px',
-                    fontFamily: "'Work Sans', system-ui, sans-serif",
-                  },
-                  // object styles
+                  ...clerkAppearance,
                   elements: {
-                    rootBox: { width: '100%' },
-                    card: {
-                      boxShadow: 'none',
-                      background: 'transparent',
-                      padding: 0,
-                      width: '100%',
-                    },
+                    ...clerkAppearance.elements,
                     // we show our own "Welcome back." heading above
                     header: { display: 'none' },
-                    formButtonPrimary: {
-                      boxShadow: '3px 3px 0 #101414',
-                      border: '2px solid #101414',
-                    },
                   },
                 }}
               />

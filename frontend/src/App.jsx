@@ -8,6 +8,7 @@ import Album from './pages/Album'
 import Search from './pages/Search'
 import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
+import SignUp from './pages/SignUp'
 
 export default function App() {
   return (
@@ -16,6 +17,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login/*" element={<Login />} />
+        {/* the /* lets Clerk add its own steps, like /sign-up/verify-email-address */}
+        <Route path="/sign-up/*" element={<SignUp />} />
         <Route
           path="/upload"
           element={
