@@ -1,9 +1,11 @@
-// HELPER: shrinks a photo and returns it as a data URL (text we can show and save)
+// HELPER: shrinks a photo before it is uploaded
 // Big phone photos are several MB, so we scale the longest side down and save as JPEG.
-// TEMPORARY: once the Cloudinary upload is connected, the original file goes there instead.
+// That makes the upload fast and keeps us well under Cloudinary's file size limit.
+// NOTE: shrinking removes the GPS + date stored inside the photo, so Upload reads
+// those from the original file first.
 // Used by: Upload
 
-export function fileToDataUrl(file, maxSize = 800, quality = 0.7) {
+export function resizeImage(file, maxSize = 1600, quality = 0.85) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file)
     const img = new Image()
@@ -15,9 +17,15 @@ export function fileToDataUrl(file, maxSize = 800, quality = 0.7) {
       canvas.width = Math.round(img.width * scale)
       canvas.height = Math.round(img.height * scale)
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
-
       URL.revokeObjectURL(url)
-      resolve(canvas.toDataURL('image/jpeg', quality))
+
+      // toBlob gives us a real file (binary), which is what Cloudinary wants
+      canvas.toBlob(
+        (blob) =>
+          blob ? resolve(blob) : reject(new Error('Could not read that image')),
+        'image/jpeg',
+        quality,
+      )
     }
 
     img.onerror = () => {

@@ -8,6 +8,7 @@ import Album from './pages/Album'
 import Search from './pages/Search'
 import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
+import NotFound from './pages/NotFound'
 
 export default function App() {
   return (
@@ -49,6 +50,8 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        {/* any URL that matches nothing above */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>
   )

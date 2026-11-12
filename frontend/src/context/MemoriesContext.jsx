@@ -6,10 +6,14 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 import { useApi } from '../lib/useApi'
+import { uploadImage } from '../lib/uploadImage'
 import { DEMO_MODE, demoMemories } from '../lib/demoMemories'
 
 // The shared box that will hold the memories
 const MemoriesContext = createContext(null)
+
+// the backend sends the timeline one page at a time, 50 is the most it allows per request
+const PAGE_SIZE = 50
 
 // '2026-09-21T00:00:00.000Z' -> '2026-09-21' (the format date inputs and the filters use)
 function toDay(value) {
@@ -37,6 +41,7 @@ function fromBackend(m) {
 function toBackend(m) {
   const body = {
     imageURL: m.imageUrl,
+    imageKey: m.imageKey,
     placeName: m.place,
     takenAt: m.date,
     caption: m.caption,
@@ -52,39 +57,76 @@ function toBackend(m) {
 // PROVIDER: wraps the whole app and it is done in main.jsx so every page can use the memories
 export function MemoriesProvider({ children }) {
   // isLoaded: Clerk finished checking if someone is logged in
-  // isSignedIn: someone is logged in
-  const { isLoaded, isSignedIn } = useAuth()
+  // userId: who is logged in (null when nobody is)
+  const { isLoaded, userId } = useAuth()
   const api = useApi()
 
   const [memories, setMemories] = useState([])
   // true while we wait for the backend
   const [loading, setLoading] = useState(true)
+  // a message when the memories could not be loaded, '' when everything is fine
+  const [error, setError] = useState('')
+  // changing this number makes the effect below run again (used by the "Try again" button)
+  const [reloadCount, setReloadCount] = useState(0)
 
-  // Runs when the app starts and again if someone logs in or out
+  // Runs when the app starts, and again if someone logs in, logs out, or switches account
   useEffect(() => {
     // wait until clerk knows who is logged in
     if (!isLoaded) return
 
-    if (!isSignedIn) {
+    if (!userId) {
       setMemories([])
+      setError('')
       setLoading(false)
       return
     }
 
-    // someone is logged in, ask the backend for the memories
-    setLoading(true)
-    api('/yourmemories')
-      .then((data) => setMemories(data.map(fromBackend)))
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [isLoaded, isSignedIn, api])
+    // if this effect is replaced (logout, account switch, retry) while a request is still
+    // on its way, "cancelled" stops the old answer from overwriting the new one
+    let cancelled = false
 
-  // ADD: saves a new memory in the backend and puts it at the front of the list.
+    // GET /yourmemories answers with { memories, nextCursor }, one page at a time.
+    // Album and Search filter in the browser, so keep asking until nextCursor is null.
+    async function loadAll() {
+      setLoading(true)
+      setError('')
+      try {
+        const all = []
+        let cursor = null
+        do {
+          const query = `limit=${PAGE_SIZE}${cursor ? `&cursor=${cursor}` : ''}`
+          const page = await api(`/yourmemories?${query}`)
+          if (cancelled) return
+          all.push(...page.memories.map(fromBackend))
+          cursor = page.nextCursor
+        } while (cursor)
+        setMemories(all)
+      } catch (err) {
+        if (cancelled) return
+        console.error(err)
+        setError(err.message)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    loadAll()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isLoaded, userId, api, reloadCount])
+
+  // ADD: sends the photo to Cloudinary, then saves the memory in the backend
+  // and puts it at the front of the list.
   // Returns the new ID and remembers to use 'await' when called.
-  async function addMemory(memory) {
+  async function addMemory({ file, ...details }) {
+    // step 1: the photo goes straight to Cloudinary, we get back its URL and its key
+    const image = await uploadImage(api, file)
+
+    // step 2: the backend saves the memory, it checks the URL + key really belong to this user
     const saved = await api('/memories', {
       method: 'POST',
-      body: JSON.stringify(toBackend(memory)),
+      body: JSON.stringify(toBackend({ ...details, ...image })),
     })
     const created = fromBackend(saved)
     setMemories((previous) => [created, ...previous])
@@ -107,16 +149,22 @@ export function MemoriesProvider({ children }) {
     await api(`/memories/${id}`, { method: 'DELETE' })
     setMemories((previous) => previous.filter((m) => m.id !== id))
   }
-// demo mode (VITE_DEMO=true) and nothing real saved yet, this is the sample memories
+
+  // demo mode (VITE_DEMO=true) and nothing real saved yet, this is the sample memories
   const showDemo = DEMO_MODE && memories.length === 0
+
   // Hand everything to the pages
   return (
     <MemoriesContext.Provider
-      value={{ memories: showDemo ? demoMemories : memories,
-               loading: showDemo ? false : loading,
-               addMemory,
-               updateMemory,
-               deleteMemory, }}
+      value={{
+        memories: showDemo ? demoMemories : memories,
+        loading: showDemo ? false : loading,
+        error: showDemo ? '' : error,
+        reload: () => setReloadCount((count) => count + 1),
+        addMemory,
+        updateMemory,
+        deleteMemory,
+      }}
     >
       {children}
     </MemoriesContext.Provider>

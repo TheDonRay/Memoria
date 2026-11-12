@@ -10,12 +10,13 @@ import { groupByMonth } from '../lib/group'
 import Polaroid from '../components/Polaroid'
 import EmptyState from '../components/EmptyState'
 import Loading from '../components/Loading'
+import LoadError from '../components/LoadError'
 import { primaryButton } from '../lib/styles'
 
 const selectClass = 'border border-ink/20 bg-print px-3 py-2 text-sm'
 
 export default function Album() {
-  const { memories, loading } = useMemories()
+  const { memories, loading, error } = useMemories()
   const [year, setYear] = useState('') // '' This means all years
   const [place, setPlace] = useState('') // '' This means every place
 
@@ -42,6 +43,10 @@ export default function Album() {
       {loading ? (
         <div className="mt-10">
           <Loading />
+        </div>
+      ) : error ? (
+        <div className="mt-10">
+          <LoadError />
         </div>
       ) : memories.length === 0 ? (
         <div className="mt-10">
@@ -94,7 +99,7 @@ export default function Album() {
           {/* month columns side by side (scrolls sideways if there are many) */}
           <div className="mt-10 flex gap-12 overflow-x-auto pb-6">
             {groups.map((group) => (
-              <section key={group.key} className="min-w-[300px] flex-1 sm:min-[360px]">
+              <section key={group.key} className="min-w-[300px] flex-1 sm:min-w-[360px]">
                 <h2 className="font-display text-3xl font-bold">
                   {group.label}
                 </h2>

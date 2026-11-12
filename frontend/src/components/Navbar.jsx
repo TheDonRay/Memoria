@@ -1,12 +1,7 @@
 // NavLink is like a normal link, but it knows when it's the current page
 import { NavLink } from 'react-router-dom'
 // Sign in button for the NavBar
-import {
-  SignedIn,
-  SignedOut,
-  SignInButton,
-  UserButton,
-} from '@clerk/clerk-react'
+import { SignedIn, SignedOut, UserButton } from '@clerk/clerk-react'
 
 // the same four links on every page
 const links = [
@@ -66,10 +61,11 @@ export default function Navbar({
 
           {showAccount && (
             <>
+              {/* same /login page as everywhere else (no popup), so signing in always looks the same */}
               <SignedOut>
-                <SignInButton mode="modal">
-                  <button className="text-sm font-medium">Sign in</button>
-                </SignInButton>
+                <NavLink to="/login" className="text-sm font-medium underline">
+                  Sign in
+                </NavLink>
               </SignedOut>
               <SignedIn>
                 <UserButton />

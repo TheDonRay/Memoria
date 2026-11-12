@@ -3,26 +3,35 @@
 // RIGHT: month-grouped list of memories + the "Add memory" button.
 
 import { Link } from 'react-router-dom'
-import { SignedIn, SignedOut, UserButton } from '@clerk/clerk-react'
+import { SignedIn, SignedOut, UserButton, useAuth } from '@clerk/clerk-react'
 import { Lock, Plus } from 'lucide-react'
 import GlobePanel from '../components/GlobePanel'
 import Navbar from '../components/Navbar'
 import Polaroid from '../components/Polaroid'
+import Loading from '../components/Loading'
 import { useMemories } from '../context/MemoriesContext'
 import { demoMemories, isDemoId, DEMO_MODE } from '../lib/demoMemories'
 import { formatDate } from '../lib/format'
 import { groupByMonth } from '../lib/group'
 
-// This is where the memory is linked to. Sample memories cannot be opened when logged out, so it goes in logged in.
-const hrefFor = (m) =>
-  isDemoId(m.id) && !DEMO_MODE ? '/login' : `/memory/${m.id}`
-
 export default function Home() {
-  const { memories } = useMemories()
+  const { memories, loading, error, reload } = useMemories()
+  const { isSignedIn } = useAuth()
 
-  // real memories go here if there is any, otherwise the sample
-  const list = memories.length ? memories : demoMemories
+  // While the real memories are still on their way, show nothing yet.
+  // Otherwise the samples flash on screen and then get swapped for the real ones.
+  // After that: real memories if there are any, otherwise the samples.
+  const showingSamples = !loading && memories.length === 0
+  const list = loading ? [] : showingSamples ? demoMemories : memories
   const featured = list[0]
+
+  // Where a memory links to. Real ones open their own page.
+  // Samples have no page: signed out they invite you to sign in,
+  // signed in they take you to Upload so you can add your first real one.
+  const hrefFor = (m) => {
+    if (!isDemoId(m.id) || DEMO_MODE) return `/memory/${m.id}`
+    return isSignedIn ? '/upload' : '/login'
+  }
 
   // The "27 places remembered" counts difference places, not the photos
   const placeCount = new Set(list.map((m) => m.place)).size
@@ -61,7 +70,7 @@ export default function Home() {
         {/* the big count, bottom left */}
         <div className="flex items-end gap-3">
           <span className="font-display text-7xl font-bold leading-none md:text-8xl">
-            {placeCount}
+            {loading ? '–' : placeCount}
           </span>
           <span className="pb-2 text-sm leading-tight text-print/70">
             {placeCount === 1 ? 'place' : 'places'}
@@ -96,6 +105,30 @@ export default function Home() {
             Memories.
           </h2>
           <p className="mt-3 text-sm text-ink/60">Little things, kept close.</p>
+
+          {loading && (
+            <div className="mt-8">
+              <Loading />
+            </div>
+          )}
+
+          {/* the backend did not answer: say so, the samples below are only a stand-in */}
+          {error && (
+            <p className="mt-8 border-l-2 border-ink pl-3 text-sm">
+              Couldn&rsquo;t load your memories. {error}{' '}
+              <button onClick={reload} className="font-medium underline">
+                Try again
+              </button>
+            </p>
+          )}
+
+          {/* signed in but nothing saved yet: explain why there are photos here anyway */}
+          {showingSamples && isSignedIn && !error && (
+            <p className="mt-8 border-l-2 border-flash pl-3 text-sm text-ink/70">
+              These are samples. Add your first memory and it will take their
+              place.
+            </p>
+          )}
 
           {/* one block per month */}
           {groups.map((group) => (

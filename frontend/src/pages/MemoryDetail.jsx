@@ -9,13 +9,15 @@ import { formatCoords, formatDate } from '../lib/format'
 import Polaroid from '../components/Polaroid'
 import EmptyState from '../components/EmptyState'
 import Loading from '../components/Loading'
+import LoadError from '../components/LoadError'
 import { inputClass, labelClass, primaryButton } from '../lib/styles'
 
 export default function MemoryDetail() {
   // The ID comes from the URL
   const { id } = useParams()
   const navigate = useNavigate()
-  const { memories, loading, updateMemory, deleteMemory } = useMemories()
+  const { memories, loading, error: loadError, updateMemory, deleteMemory } =
+    useMemories()
 
   const memory = memories.find((m) => m.id === id)
 
@@ -24,18 +26,40 @@ export default function MemoryDetail() {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(null)
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false) // true while a save or delete is on its way
+
+  // This page has no padding of its own (the two panels go edge to edge),
+  // so the small states below get the same padding as the other pages.
+  const padded = 'mx-auto w-full max-w-[1440px] px-5 py-8 md:px-16 md:py-12'
 
   // Still waiting for the backend, so we can't tell yet if the memory exists
-  if (loading) return <Loading />
+  if (loading) {
+    return (
+      <div className={padded}>
+        <Loading />
+      </div>
+    )
+  }
+
+  // The memories never arrived, so "not found" would be the wrong thing to say
+  if (loadError && !memory) {
+    return (
+      <div className={padded}>
+        <LoadError />
+      </div>
+    )
+  }
 
   // The ID in the URL doesn't match anything saved
   if (!memory) {
     return (
-      <EmptyState title="Memory not found" text="It may have been deleted.">
-        <Link to="/album" className="underline">
-          Back to the album
-        </Link>
-      </EmptyState>
+      <div className={padded}>
+        <EmptyState title="Memory not found" text="It may have been deleted.">
+          <Link to="/album" className="underline">
+            Back to the album
+          </Link>
+        </EmptyState>
+      </div>
     )
   }
 
@@ -51,23 +75,34 @@ export default function MemoryDetail() {
   }
 
   async function saveEdits() {
+    if (!draft.place.trim()) return setError('Add a place name.')
+    if (!draft.date) return setError('Pick the date of this memory.')
+
+    setError('')
+    setBusy(true)
     try {
       await updateMemory(memory.id, draft)
       setEditing(false)
     } catch (err) {
       // stay in edit mode so nothing typed is lost
       setError(`Could not save changes. ${err.message}`)
+    } finally {
+      setBusy(false)
     }
   }
 
   async function handleDelete() {
     // Ask first so nothing disappears by accident
     if (!window.confirm('Delete this memory? This cannot be undone.')) return
+    setError('')
+    setBusy(true)
     try {
       await deleteMemory(memory.id)
-      navigate('/album')
+      // replace: so the Back button does not return to a memory that is gone
+      navigate('/album', { replace: true })
     } catch (err) {
       setError(`Could not delete this memory. ${err.message}`)
+      setBusy(false)
     }
   }
   return (
@@ -127,12 +162,17 @@ export default function MemoryDetail() {
             <div className="flex gap-4">
               <button
                 onClick={saveEdits}
-                className={`px-5 py-2 ${primaryButton}`}
+                disabled={busy}
+                className={`px-5 py-2 disabled:opacity-60 ${primaryButton}`}
               >
-                Save changes
+                {busy ? 'Saving…' : 'Save changes'}
               </button>
               <button
-                onClick={() => setEditing(false)}
+                onClick={() => {
+                  setError('')
+                  setEditing(false)
+                }}
+                disabled={busy}
                 className="text-sm underline"
               >
                 Cancel
@@ -175,8 +215,12 @@ export default function MemoryDetail() {
               >
                 <Pencil size={14} /> Edit
               </button>
-              <button onClick={handleDelete} className="text-sm underline">
-                Delete
+              <button
+                onClick={handleDelete}
+                disabled={busy}
+                className="text-sm underline disabled:opacity-60"
+              >
+                {busy ? 'Deleting…' : 'Delete'}
               </button>
             </div>
           </>

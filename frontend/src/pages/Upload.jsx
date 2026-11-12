@@ -5,17 +5,18 @@ STEPS:
     1. User drops a photo
     2. We read GPS and date from the photo (if available)
     3. User fills in or fixes the fields of data
-    4. Save -> goes to the memory page
+    4. Save -> photo goes to Cloudinary, the memory goes to our backend
+    5. Then we jump to the new memory's page
 */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
 import { gps, parse } from 'exifr'
 import { format } from 'date-fns'
 import { ImagePlus } from 'lucide-react'
 import { useMemories } from '../context/MemoriesContext'
-import { fileToDataUrl } from '../lib/resizeImage'
+import { resizeImage } from '../lib/resizeImage'
 import Polaroid from '../components/Polaroid'
 // This shares the same style for the form fields so they all match
 import { inputClass, labelClass, primaryButton } from '../lib/styles'
@@ -25,7 +26,8 @@ export default function Upload() {
   const { addMemory } = useMemories()
 
   // FORM STATE (everything starts empty obviously)
-  const [photo, setPhoto] = useState('') // the resized photo, as text we can store
+  const [file, setFile] = useState(null) // the resized photo, this is what gets uploaded
+  const [preview, setPreview] = useState('') // a temporary browser link to show that photo
   const [place, setPlace] = useState('')
   const [lat, setLat] = useState('')
   const [lng, setLng] = useState('')
@@ -36,37 +38,49 @@ export default function Upload() {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false) // true while waiting for the backend
 
+  // the preview link holds the photo in memory, so let go of it when it is replaced or we leave
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview)
+    }
+  }, [preview])
+
   // THIS RUNS WHEN THE USER DROPS OR PICKS A PHOTO
   async function onDrop(files) {
-    const file = files[0]
-    if (!file) return
+    const original = files[0]
+    if (!original) return
     setError('')
 
-    // Step 1: shrink the photo so it is small enough to save it
+    // Step 1: shrink the photo so the upload is quick
     try {
-      setPhoto(await fileToDataUrl(file))
+      const resized = await resizeImage(original)
+      setFile(resized)
+      setPreview(URL.createObjectURL(resized))
     } catch {
-      setError('Could not read that image. Try to JPG or PNG')
+      setError('Could not read that image. Try a JPG or PNG.')
       return
     }
 
+    // a new photo starts fresh, so the last photo's coordinates don't stick around
+    setLat('')
+    setLng('')
+    setDetected(false)
+
     // Step 2: read the GPS from the OG file (shrinking removes it)
     try {
-      const found = await gps(file)
+      const found = await gps(original)
       if (found && found.latitude != null) {
         setLat(found.latitude.toFixed(4))
         setLng(found.longitude.toFixed(4))
         setDetected(true)
-      } else {
-        setDetected(false)
       }
     } catch {
-      setDetected(false) // no GPS is fine, the user can just type it
+      // no GPS is fine, the user can just type it
     }
 
     // Step 3: read the date the photo was taken
     try {
-      const info = await parse(file, ['DateTimeOriginal'])
+      const info = await parse(original, ['DateTimeOriginal'])
       if (info && info.DateTimeOriginal) {
         setDate(format(info.DateTimeOriginal, 'yyyy-MM-dd'))
       }
@@ -80,6 +94,7 @@ export default function Upload() {
     onDrop,
     accept: { 'image/*': [] },
     multiple: false,
+    disabled: saving, // no swapping the photo while it is being uploaded
   })
 
   // THIS RUNS WHEN THE USER CLICKS SAVE
@@ -87,7 +102,7 @@ export default function Upload() {
     event.preventDefault()
 
     // all three of these are required
-    if (!photo) return setError('Add a photo first.')
+    if (!file) return setError('Add a photo first.')
     if (!place.trim()) return setError('Add a place name.')
     if (!date) return setError('Pick the date of this memory.')
 
@@ -95,13 +110,22 @@ export default function Upload() {
     const latNumber = parseFloat(lat)
     const lngNumber = parseFloat(lng)
     const hasCoords = !Number.isNaN(latNumber) && !Number.isNaN(lngNumber)
+    // catch bad numbers here, otherwise the backend rejects the whole memory after the upload
+    if (
+      hasCoords &&
+      (Math.abs(latNumber) > 90 || Math.abs(lngNumber) > 180)
+    ) {
+      return setError(
+        'Latitude must be between -90 and 90, longitude between -180 and 180.',
+      )
+    }
 
     // save it and then jump to the new memory's page
     setError('')
     setSaving(true)
     try {
       const id = await addMemory({
-        imageUrl: photo,
+        file,
         place: place.trim(),
         lat: hasCoords ? latNumber : null,
         lng: hasCoords ? lngNumber : null,
@@ -126,7 +150,10 @@ export default function Upload() {
         One photo, a few words. Something to come back to.
       </p>
 
-      <form onSubmit={handleSubmit} className="mt-10 grid grid-cols-2 gap-16">
+      <form
+        onSubmit={handleSubmit}
+        className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-16"
+      >
         {/* LEFT COLUMN: photo */}
         <div>
           <span className={labelClass}>Photo</span>
@@ -143,18 +170,19 @@ export default function Upload() {
             <input {...getInputProps()} />
             <ImagePlus size={28} className="text-ink/50" />
             <p className="mt-3 text-sm">
-              Drop a photo here or <span className="underline">browse</span>
+              {file ? 'Drop a different photo or ' : 'Drop a photo here or '}
+              <span className="underline">browse</span>
             </p>
             <p className="mt-1 font-mono text-[11px] text-ink/40">JPG or PNG</p>
           </div>
 
           {/* live polaroid preview, updates as the user types */}
-          {photo && (
+          {preview && (
             <div className="mt-8 w-64">
               <Polaroid
                 memory={{
                   id: 'preview',
-                  imageUrl: photo,
+                  imageUrl: preview,
                   place: place || 'Place',
                   date,
                   caption,
@@ -200,7 +228,7 @@ export default function Upload() {
             </div>
             <p className="mt-2 font-mono text-[11px] text-ink/50">
               {detected
-                ? `detected from photo: ${lat} N, ${lng} E`
+                ? 'Detected from the photo. You can still change them.'
                 : 'No GPS found in the photo. Add coordinates to get a pin on the globe.'}
             </p>
           </div>
@@ -244,7 +272,7 @@ export default function Upload() {
             disabled={saving}
             className={`px-6 py-3 disabled:opacity-60 ${primaryButton}`}
           >
-            {saving ? 'Saving…' : 'Save memory'}
+            {saving ? 'Uploading…' : 'Save memory'}
           </button>
         </div>
       </form>

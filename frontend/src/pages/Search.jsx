@@ -10,12 +10,13 @@ import Highlight from '../components/Highlight'
 import Polaroid from '../components/Polaroid'
 import EmptyState from '../components/EmptyState'
 import Loading from '../components/Loading'
+import LoadError from '../components/LoadError'
 import { labelClass, primaryButton } from '../lib/styles'
 
 const inputClass = 'mt-2 w-full border border-ink/20 bg-print px-3 py-2 text-sm'
 
 export default function Search() {
-  const { memories, loading } = useMemories()
+  const { memories, loading, error } = useMemories()
 
   // EVERYTHING THE USER CAN TYPE OR TICK
   const [query, setQuery] = useState('')
@@ -79,6 +80,10 @@ export default function Search() {
       {loading ? (
         <div className="mt-10">
           <Loading />
+        </div>
+      ) : error ? (
+        <div className="mt-10">
+          <LoadError />
         </div>
       ) : memories.length === 0 ? (
         <div className="mt-10">
@@ -171,7 +176,7 @@ export default function Search() {
           {/* RIGHT: results */}
           <section>
             <p className="font-mono text-xs text-ink/60">
-              {results.length} results
+              {results.length} {results.length === 1 ? 'result' : 'results'}
             </p>
 
             {results.length === 0 ? (
