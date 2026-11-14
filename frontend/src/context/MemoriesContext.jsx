@@ -59,6 +59,8 @@ export function MemoriesProvider({ children }) {
   const [memories, setMemories] = useState([])
   // true while we wait for the backend
   const [loading, setLoading] = useState(true)
+  // where the next page starts (null = no more pages). Used later by "Load more".
+  const [nextCursor, setNextCursor] = useState(null)
 
   // Runs when the app starts and again if someone logs in or out
   useEffect(() => {
@@ -67,14 +69,20 @@ export function MemoriesProvider({ children }) {
 
     if (!isSignedIn) {
       setMemories([])
+      // reset so the next user who logs in doesn't get this user's cursor
+      setNextCursor(null)
       setLoading(false)
       return
     }
 
-    // someone is logged in, ask the backend for the memories
+    // someone is logged in, ask the backend for the first page of memories
+    // the backend sends { memories: [...], nextCursor: "..." or null }
     setLoading(true)
     api('/yourmemories')
-      .then((data) => setMemories(data.map(fromBackend)))
+      .then((data) => {
+        setMemories(data.memories.map(fromBackend))
+        setNextCursor(data.nextCursor)
+      })
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [isLoaded, isSignedIn, api])

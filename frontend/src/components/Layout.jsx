@@ -8,7 +8,7 @@ import Navbar from './Navbar'
 export default function Layout({ children }) {
   const { pathname } = useLocation()
   const isHome = pathname === '/'
-  const isLogin = pathname.toLowerCase().startsWith('/login')
+  const isLogin = /^\/(login|signup)/i.test(pathname)
   const isDetail = pathname.startsWith('/memory/')
 
 // Home and Login have no shared navbar

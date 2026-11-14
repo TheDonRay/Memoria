@@ -1,10 +1,9 @@
 // NavLink is like a normal link, but it knows when it's the current page
-import { NavLink } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 // Sign in button for the NavBar
 import {
   SignedIn,
   SignedOut,
-  SignInButton,
   UserButton,
 } from '@clerk/clerk-react'
 
@@ -67,9 +66,9 @@ export default function Navbar({
           {showAccount && (
             <>
               <SignedOut>
-                <SignInButton mode="modal">
-                  <button className="text-sm font-medium">Sign in</button>
-                </SignInButton>
+                <Link to="/login" className="text-sm font-medium">
+                  Sign in
+                </Link>
               </SignedOut>
               <SignedIn>
                 <UserButton />

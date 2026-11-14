@@ -8,14 +8,21 @@ import Album from './pages/Album'
 import Search from './pages/Search'
 import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
+import SignUp from './pages/SignUp'
+import SsoCallback from './pages/SsoCallback'
+import SessionGuard from './components/SessionGuard'
 
 export default function App() {
   return (
     // Layout adds the same navbar and width to every page
     <Layout>
+      {/* signs you out after a browser restart if you unticked "Remember me" */}
+      <SessionGuard />
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/login/sso-callback" element={<SsoCallback />} />
         <Route path="/login/*" element={<Login />} />
+        <Route path="/signup/*" element={<SignUp />} />
         <Route
           path="/upload"
           element={

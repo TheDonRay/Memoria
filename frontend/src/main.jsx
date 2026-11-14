@@ -30,7 +30,8 @@ createRoot(document.getElementById('root')).render(
     <ClerkProvider 
     publishableKey={PUBLISHABLE_KEY} 
     afterSignOutUrl="/"
-    signInUrl="/login">
+    signInUrl="/login"
+    signUpUrl="/signup">
       <BrowserRouter>
         <MemoriesProvider>
           <App />
