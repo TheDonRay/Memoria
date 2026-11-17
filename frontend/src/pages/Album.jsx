@@ -10,12 +10,13 @@ import { groupByMonth } from '../lib/group'
 import Polaroid from '../components/Polaroid'
 import EmptyState from '../components/EmptyState'
 import Loading from '../components/Loading'
+import ErrorMessage from '../components/ErrorMessage'
 import { primaryButton } from '../lib/styles'
 
 const selectClass = 'border border-ink/20 bg-print px-3 py-2 text-sm'
 
 export default function Album() {
-  const { memories, loading } = useMemories()
+  const { memories, loading, loadingMore, error, hasMore, loadMore, reload } = useMemories()
   const [year, setYear] = useState('') // '' This means all years
   const [place, setPlace] = useState('') // '' This means every place
 
@@ -43,7 +44,16 @@ export default function Album() {
         <div className="mt-10">
           <Loading />
         </div>
-      ) : memories.length === 0 ? (
+      ) : error && memories.length === 0 ? (
+        // the first page failed to load, so send a message
+        <div className="mt-10">
+          <ErrorMessage
+          title="We couldn't load your memories."
+          message={error}
+          onRetry={reload}
+          />
+        </div>
+       ) : memories.length === 0 ? (
         <div className="mt-10">
           <EmptyState
             title="Your album is empty"
@@ -94,7 +104,7 @@ export default function Album() {
           {/* month columns side by side (scrolls sideways if there are many) */}
           <div className="mt-10 flex gap-12 overflow-x-auto pb-6">
             {groups.map((group) => (
-              <section key={group.key} className="min-w-[300px] flex-1 sm:min-[360px]">
+              <section key={group.key} className="min-w-[300px] flex-1 sm:min-w-[360px]">
                 <h2 className="font-display text-3xl font-bold">
                   {group.label}
                 </h2>
@@ -113,6 +123,31 @@ export default function Album() {
               </section>
             ))}
           </div>
+          {/* if "load more" failed, say so and let the user try again */}
+          {error && (
+            <div className="mt-6">
+              <ErrorMessage
+              title="We couldn't load more memories."
+              message={error}
+              onRetry={loadMore}
+              />
+            </div>
+          )}
+
+          {/* more than 20 memories: the rest come in pages. Hidden when there are no more. */}
+          {hasMore && (
+            <div className="mt-6 flex items-center gap-4">
+              <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className={`px-6 py-3 disabled:opacity-60 ${primaryButton}`}>
+                {loadingMore ? 'Loading...' : 'Load more'}
+              </button>
+              <span className="font-mono text-xs text-ink/50">
+                {memories.length} loaded so far
+              </span>
+            </div>
+          )}
         </>
       )}
     </div>

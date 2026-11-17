@@ -2,7 +2,7 @@
 // Search box + filters (place, date range, has notes). This will result in polaroids.
 // With the matching word highlighted in yellow. Everything is built from real data.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Search as SearchIcon } from 'lucide-react'
 import { useMemories } from '../context/MemoriesContext'
@@ -10,12 +10,13 @@ import Highlight from '../components/Highlight'
 import Polaroid from '../components/Polaroid'
 import EmptyState from '../components/EmptyState'
 import Loading from '../components/Loading'
+import ErrorMessage from '../components/ErrorMessage'
 import { labelClass, primaryButton } from '../lib/styles'
 
 const inputClass = 'mt-2 w-full border border-ink/20 bg-print px-3 py-2 text-sm'
 
 export default function Search() {
-  const { memories, loading } = useMemories()
+  const { memories, loading, loadingMore, error, hasMore, loadAll, reload } = useMemories()
 
   // EVERYTHING THE USER CAN TYPE OR TICK
   const [query, setQuery] = useState('')
@@ -26,6 +27,11 @@ export default function Search() {
   const [inText, setInText] = useState(true) // Search captions + the notes
   const [inPlaces, setInPlaces] = useState(true) // Search the place names
 
+  // The backend sends memories 20 at a time and we can only search waht ios loaded.
+  // so once the first page is in, quietly load all the other pages as well.
+  useEffect(() => {
+    if (!loading && hasMore) loadAll()
+  }, [loading, hasMore, loadAll])
   const places = [...new Set(memories.map((m) => m.place))].sort()
 
   // THE ACTUAL FILTERING
@@ -80,6 +86,14 @@ export default function Search() {
         <div className="mt-10">
           <Loading />
         </div>
+      ) : error && memories.length === 0 ? (
+        <div className="mt-10">
+          <ErrorMessage
+          title="We couldn't load your memories."
+          message={error}
+          onRetry={reload}
+          />
+          </div>
       ) : memories.length === 0 ? (
         <div className="mt-10">
           <EmptyState
@@ -172,7 +186,19 @@ export default function Search() {
           <section>
             <p className="font-mono text-xs text-ink/60">
               {results.length} results
+              {loadingMore && ' still loading the rest of your memories...'}
             </p>
+
+            {/* if loading the other pages failed, results may be missing some memories */}
+            {error && (
+              <div className="mt-4">
+                <ErrorMessage
+                title="We couldn't load all your memories."
+                message={error}
+                onRetry={loadAll}
+                />
+              </div>
+            )}
 
             {results.length === 0 ? (
               <p className="mt-6 text-ink/60">

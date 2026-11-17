@@ -5,8 +5,9 @@
 import { useCallback } from 'react'
 import { useAuth } from '@clerk/clerk-react'
 
+// when site is live, set VITE_API_URL to the backend's address instead
 // Vite sends /api to the backend in dev (see the proxy in vite.config.js)
-const BASE_URL = '/api/v1'
+const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
 
 export function useApi() {
   const { getToken } = useAuth()
@@ -30,7 +31,10 @@ export function useApi() {
       // some error responses may not be JSON, so don't crash if parsing fails
       const data = await res.json().catch(() => null)
       if (!res.ok) {
-        throw new Error(data?.error || `Request failed (${res.status})`)
+        const error = new Error(data?.error || `Request failed (${res.status})`)
+        // pages use this to tell "not found" (404) apart from "bad request" (400)
+        error.status = res.status
+        throw error
       }
       return data
     },
