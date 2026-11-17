@@ -8,14 +8,15 @@ STEPS:
     4. Save -> goes to the memory page
 */
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
 import { gps, parse } from 'exifr'
 import { format } from 'date-fns'
 import { ImagePlus } from 'lucide-react'
 import { useMemories } from '../context/MemoriesContext'
-import { fileToDataUrl } from '../lib/resizeImage'
+import { useApi } from '../lib/useApi'
+import { uploadToCloudinary } from '../lib/cloudinary'
 import Polaroid from '../components/Polaroid'
 // This shares the same style for the form fields so they all match
 import { inputClass, labelClass, primaryButton } from '../lib/styles'
@@ -23,9 +24,11 @@ import { inputClass, labelClass, primaryButton } from '../lib/styles'
 export default function Upload() {
   const navigate = useNavigate()
   const { addMemory } = useMemories()
+  const api = useApi()
 
   // FORM STATE (everything starts empty obviously)
-  const [photo, setPhoto] = useState('') // the resized photo, as text we can store
+  const [file, setFile] = useState(null) // the photo ther user picked
+  const [preview, setPreview] = useState('') // the resized photo, as text we can store
   const [place, setPlace] = useState('')
   const [lat, setLat] = useState('')
   const [lng, setLng] = useState('')
@@ -35,24 +38,31 @@ export default function Upload() {
   const [detected, setDetected] = useState(false) // true if GPS was found in the photo
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false) // true while waiting for the backend
+  const [stage, setStage] = useState('') // what we are doing right now
+  const [progress, setProgress] = useState(0) // 0 to 100, only while the photo uploads
+  const uploadedRef = useRef(null)
 
-  // THIS RUNS WHEN THE USER DROPS OR PICKS A PHOTO
-  async function onDrop(files) {
-    const file = files[0]
-    if (!file) return
+  // free the temporary preview link when the photo changes or the page closes
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview)
+    }
+  }, [preview])
+
+   // THIS RUNS WHEN THE USER DROPS OR PICKS A PHOTO
+   async function onDrop(files) {
+    const picked = files[0]
+    if (!picked) return
     setError('')
 
-    // Step 1: shrink the photo so it is small enough to save it
-    try {
-      setPhoto(await fileToDataUrl(file))
-    } catch {
-      setError('Could not read that image. Try to JPG or PNG')
-      return
-    }
+    // Step 1: keep the real file (it goes to Cloudinary) and show a preview of it
+    uploadedRef.current = null // a new photo means a new upload
+    setFile(picked)
+    setPreview(URL.createObjectURL(picked))
 
-    // Step 2: read the GPS from the OG file (shrinking removes it)
+    // Step 2: read the GPS from the photo
     try {
-      const found = await gps(file)
+      const found = await gps(picked)
       if (found && found.latitude != null) {
         setLat(found.latitude.toFixed(4))
         setLng(found.longitude.toFixed(4))
@@ -66,7 +76,7 @@ export default function Upload() {
 
     // Step 3: read the date the photo was taken
     try {
-      const info = await parse(file, ['DateTimeOriginal'])
+      const info = await parse(picked, ['DateTimeOriginal'])
       if (info && info.DateTimeOriginal) {
         setDate(format(info.DateTimeOriginal, 'yyyy-MM-dd'))
       }
@@ -78,16 +88,22 @@ export default function Upload() {
   // drag and drop box settings, images only and its one at a time
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'image/*': [] },
+    accept: { 
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'image/webp': ['.webp'],
+      'image/heic': ['.heic'],
+   },
     multiple: false,
   })
 
+  // THIS RUNS WHEN THE USER CLICKS SAVE
   // THIS RUNS WHEN THE USER CLICKS SAVE
   async function handleSubmit(event) {
     event.preventDefault()
 
     // all three of these are required
-    if (!photo) return setError('Add a photo first.')
+    if (!file) return setError('Add a photo first.')
     if (!place.trim()) return setError('Add a place name.')
     if (!date) return setError('Pick the date of this memory.')
 
@@ -96,12 +112,40 @@ export default function Upload() {
     const lngNumber = parseFloat(lng)
     const hasCoords = !Number.isNaN(latNumber) && !Number.isNaN(lngNumber)
 
-    // save it and then jump to the new memory's page
     setError('')
     setSaving(true)
+    setProgress(0)
+
+    // STEP A + B: upload the photo to Cloudinary (skipped if it already uploaded once)
+    let uploaded = uploadedRef.current
+    if (!uploaded) {
+      let signature
+      try {
+        setStage('Getting ready to upload…')
+        signature = await api('/upload-signature', { method: 'POST' })
+      } catch (err) {
+        setError(`Could not start the upload. ${err.message}`)
+        setSaving(false)
+        return
+      }
+
+      try {
+        setStage('Uploading photo…')
+        uploaded = await uploadToCloudinary(file, signature, setProgress)
+        uploadedRef.current = uploaded
+      } catch (err) {
+        setError(`The photo did not upload. ${err.message}`)
+        setSaving(false)
+        return
+      }
+    }
+
+    // STEP C: save the memory in our backend, then jump to its page
     try {
+      setStage('Saving your memory…')
       const id = await addMemory({
-        imageUrl: photo,
+        imageUrl: uploaded.imageURL,
+        imageKey: uploaded.imageKey,
         place: place.trim(),
         lat: hasCoords ? latNumber : null,
         lng: hasCoords ? lngNumber : null,
@@ -111,7 +155,7 @@ export default function Upload() {
       })
       navigate(`/memory/${id}`)
     } catch (err) {
-      setError(`Could not save the memory. ${err.message}`)
+      setError(`The photo uploaded, but the memory could not be saved. ${err.message}`)
       setSaving(false)
     }
   }
@@ -145,16 +189,16 @@ export default function Upload() {
             <p className="mt-3 text-sm">
               Drop a photo here or <span className="underline">browse</span>
             </p>
-            <p className="mt-1 font-mono text-[11px] text-ink/40">JPG or PNG</p>
+            <p className="mt-1 font-mono text-[11px] text-ink/40">JPG, PNG, WEBP or HEIC</p>
           </div>
 
           {/* live polaroid preview, updates as the user types */}
-          {photo && (
+          {preview && (
             <div className="mt-8 w-64">
               <Polaroid
                 memory={{
                   id: 'preview',
-                  imageUrl: photo,
+                  imageUrl: preview,
                   place: place || 'Place',
                   date,
                   caption,
@@ -237,6 +281,24 @@ export default function Upload() {
           </label>
 
           {error && <p className="text-sm font-medium text-red-700">{error}</p>}
+          
+          {/* what is happening while we save, plus a bar while the photo uploads */}
+          {saving && (
+            <div>
+              <p classname="font-mono text-xs text-ink/60">
+                {stage}
+                {stage === 'Uploading photo...' && ` ${progress}%`}
+              </p>
+              {stage === 'Uploading photo...' && (
+                <div className="mt-2 h-1.5 w-full bg-ink/10">
+                  <div
+                    className="h-full bg-teal transition-all"
+                    style={{ width: `${progress}%` }}
+                    />
+                    </div>
+              )}
+              </div>
+          )}
 
           {/* the one yellow button on this page */}
           <button

@@ -3,26 +3,36 @@
 // RIGHT: month-grouped list of memories + the "Add memory" button.
 
 import { Link } from 'react-router-dom'
-import { SignedIn, SignedOut, UserButton } from '@clerk/clerk-react'
+import { SignedIn, SignedOut, UserButton, useAuth } from '@clerk/clerk-react'
 import { Lock, Plus } from 'lucide-react'
 import GlobePanel from '../components/GlobePanel'
 import Navbar from '../components/Navbar'
 import Polaroid from '../components/Polaroid'
+import EmptyState from '../components/EmptyState'
+import ErrorMessage from '../components/ErrorMessage'
+import Loading from '../components/Loading'
 import { useMemories } from '../context/MemoriesContext'
 import { demoMemories, isDemoId, DEMO_MODE } from '../lib/demoMemories'
 import { formatDate } from '../lib/format'
 import { groupByMonth } from '../lib/group'
+import { useFirstName } from '../lib/useFirstName'
+import { primaryButton } from '../lib/styles'
+
 
 // This is where the memory is linked to. Sample memories cannot be opened when logged out, so it goes in logged in.
 const hrefFor = (m) =>
   isDemoId(m.id) && !DEMO_MODE ? '/login' : `/memory/${m.id}`
 
 export default function Home() {
-  const { memories } = useMemories()
+  const { memories, loading, error, hasMore, reload } = useMemories()
+  const { isLoaded, isSignedIn } = useAuth()
+  const firstName = useFirstName()
 
-  // real memories go here if there is any, otherwise the sample
-  const list = memories.length ? memories : demoMemories
-  const featured = list[0]
+  // The sample memories are only for visitors who are logged out
+  // A real user with no memories sees an empty state instead, not example photos.
+  const showSamples = DEMO_MODE || (isLoaded && !isSignedIn)
+  const list = memories.length ? memories : showSamples ? demoMemories : []
+  const featured = list[0] ?? null
 
   // The "27 places remembered" counts difference places, not the photos
   const placeCount = new Set(list.map((m) => m.place)).size
@@ -38,7 +48,7 @@ export default function Home() {
 
         <div className="mt-12 md:mt-16">
           <p className="font-mono text-[10px] uppercase tracking-wider text-print/60">
-            Karma&rsquo;s world
+            {firstName ? `${firstName}'s world` : 'Your world'}
           </p>
           <h1 className="mt-3 font-display text-4xl font-bold leading-[1.05] md:text-5xl">
             A few places.
@@ -96,6 +106,37 @@ export default function Home() {
             Memories.
           </h2>
           <p className="mt-3 text-sm text-ink/60">Little things, kept close.</p>
+          {/* Still loading, or something went wrong, or the user has nothing saved yet */}
+          {loading && (
+            <div className="mt-8">
+              <Loading />
+              </div>
+          )}
+          {!loading && error && list.length === 0 && (
+            <div className="mt-8">
+              <ErrorMessage
+              title="We couldn't load your memories."
+              message={error}
+              onRetry={reload}
+              />
+              </div>
+          )}
+          {!loading && !error && list.length === 0 && (
+            <div className="mt-8">
+              <EmptyState
+              title="No memories yet"
+              text="Add your first photo and it shows up here, and as a pin on your globe."
+              example="Lisbon - 21 Sep 2026"
+              >
+                <Link
+                to="/upload"
+                className={`inline-block px-5 py-3 ${primaryButton}`}
+                >
+                  Add Memory
+                </Link>
+              </EmptyState>
+              </div>
+          )}
 
           {/* one block per month */}
           {groups.map((group) => (
@@ -126,6 +167,12 @@ export default function Home() {
               </ul>
             </section>
           ))}
+          {/* this list only has the newest 20, the album has the rest */}
+          {hasMore && (
+            <Link to="/album" className="mt-6 block text-sm underline">
+              See all your memories in the album
+            </Link>
+          )}
         </div>
 
         {/* button stays at the bottom of the panel */}

@@ -1,7 +1,7 @@
 // PAGE: /memory/:id
 // Shows one memory big. Has Edit (inline) and Delete.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Pencil } from 'lucide-react'
 import { useMemories } from '../context/MemoriesContext'
@@ -9,15 +9,53 @@ import { formatCoords, formatDate } from '../lib/format'
 import Polaroid from '../components/Polaroid'
 import EmptyState from '../components/EmptyState'
 import Loading from '../components/Loading'
+import ErrorMessage from '../components/ErrorMessage'
+import { isDemoId } from '../lib/demoMemories'
 import { inputClass, labelClass, primaryButton } from '../lib/styles'
 
 export default function MemoryDetail() {
   // The ID comes from the URL
   const { id } = useParams()
   const navigate = useNavigate()
-  const { memories, loading, updateMemory, deleteMemory } = useMemories()
+  const { memories, loading, getMemory, updateMemory, deleteMemory } = useMemories()
 
-  const memory = memories.find((m) => m.id === id)
+  // the memory from the list we already loaded (undefined if it isn't there)
+  const listed = memories.find((m) => m.id === id)
+
+  // When it isn't in the list we ask the backend, and keep the answer here.
+  // status: 'idle' | 'loading' | 'found' | 'notfound' | 'error'
+  const [lookup, setLookup] = useState({ status: 'idle', memory: null, message: '' })
+  const [tries, setTries] = useState(0) // bumped by the Try again button
+  const isListed = Boolean(listed)
+
+  useEffect(() => {
+    // nothing to look up if the list is still loading, we already have it, or it's a sample
+    if (loading || isListed || isDemoId(id)) return
+
+    let cancelled = false
+    setLookup({ status: 'loading', memory: null, message: '' })
+    getMemory(id)
+      .then((found) => {
+        if (!cancelled) setLookup({ status: 'found', memory: found, message: '' })
+      })
+      .catch((err) => {
+        if (cancelled) return
+        // 404 = no such memory, 400 = the id in the link isn't valid
+        const status = err.status === 404 ? 'notfound' : 'error'
+        const message =
+          err.status === 400
+            ? 'That link does not look right. Check the address and try again.'
+            : err.message
+        setLookup({ status, memory: null, message })
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [id, loading, isListed, getMemory, tries])
+
+  // use the one from the list if we have it, otherwise the one we fetched
+  const memory = listed ?? lookup.memory
 
   // editing = showing the text boxes instead of text
   // draft = whats being typed
@@ -28,8 +66,23 @@ export default function MemoryDetail() {
   // Still waiting for the backend, so we can't tell yet if the memory exists
   if (loading) return <Loading />
 
-  // The ID in the URL doesn't match anything saved
   if (!memory) {
+    // waiting for the backend to answer about the memory
+    if (!isDemoId(id) && (lookup.status === 'idle' || lookup.status === 'loading')) {
+      return <Loading />
+    }
+
+    // something other than "not found" went wrong
+    if (lookup.status === 'error') {
+      return (
+        <ErrorMessage
+        title="We couldn't open this memory."
+        message={lookup.message}
+        onRetry={() => setTries((n) => n + 1)}
+        />
+      )
+    }
+     // The ID in the URL doesn't match anything saved
     return (
       <EmptyState title="Memory not found" text="It may have been deleted.">
         <Link to="/album" className="underline">
@@ -52,7 +105,11 @@ export default function MemoryDetail() {
 
   async function saveEdits() {
     try {
-      await updateMemory(memory.id, draft)
+      const updated = await updateMemory(memory.id, draft)
+      // if this memory came from a direct link isn't in the list, so update our copy too
+      setLookup((previous) =>
+      previous.memory ? { ...previous, memory: updated } : previous,
+      )
       setEditing(false)
     } catch (err) {
       // stay in edit mode so nothing typed is lost
@@ -153,11 +210,16 @@ export default function MemoryDetail() {
               <span>{formatCoords(memory.lat, memory.lng)}</span>
             </div>
 
-            {memory.caption && (
-              <p className="mt-10 border-t border-ink/10 pt-8 font-display text-xl leading-relaxed">
-                {memory.caption}
-              </p>
-            )}
+           {/* Caption: shown once it exists. While the AI caption is still being written (status: "pending") */}
+           {memory.caption ? (
+            <p className="mt-10 border-t border-ink/10 pt-8 font-display text-xl leading-relaxed">
+              {memory.caption}
+            </p>
+           ) : memory.captionStatus === 'pending' ? (
+            <p className="mt-10 border-t border-ink/10 pt-8 text-sm italic text-ink/40">
+              Caption coming soon
+            </p>
+           ) : null }
 
             {memory.notes && (
               <div className="mt-10 border-t border-ink/10 pt-8">
