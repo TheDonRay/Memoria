@@ -35,6 +35,11 @@ const memoriaSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    // Cloudinary public_id, used to verify ownership and delete the image
+    imageKey: {
+      type: String,
+      required: true,
+    },
     note: String,
     caption: String,
     captionStatus: {
@@ -42,7 +47,11 @@ const memoriaSchema = new mongoose.Schema(
       enum: ["pending", "failed", "done"],
       default: "pending",
     },
-    takenAt: Date,
+    takenAt: { 
+      type: Date, 
+      required: true, 
+      default: Date.now
+    }, 
     location: { type: pointSchema, default: undefined }, // GeoJSON { type: 'Point', coordinates: [lng, lat] }
     placeName: String,
   },
@@ -50,7 +59,7 @@ const memoriaSchema = new mongoose.Schema(
 );
 
 memoriaSchema.index({ location: "2dsphere" }); // globe queries
-memoriaSchema.index({ userId: 1, takenAt: -1 }); // timeline: a user's memories by date
+memoriaSchema.index({ userId: 1, takenAt: -1, _id: -1 }); // timeline pagination: a user's memories newest first, _id breaks ties
 
 const Memory = mongoose.model("Memory", memoriaSchema);
 

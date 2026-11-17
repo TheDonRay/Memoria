@@ -11,6 +11,7 @@
   --color-ink: #101414;
   --color-teal: #1f6f6b;
   --color-print: #fafaf7;
+  --color-danger: #b3261e;
 
   /* fonts: gives us font-display, font-body, font-mono */
   --font-display: 'Playfair Display', Georgia, serif;
@@ -27,4 +28,36 @@ body {
   background-color: var(--color-mist);
   font-family: var(--font-body);
   color: var(--color-ink);
+}
+
+/* Chrome paints autofilled inputs blue/yellow; keep our off-white boxes */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--color-print) inset;
+  -webkit-text-fill-color: var(--color-ink);
+  caret-color: var(--color-ink);
+  transition: background-color 9999s;
+}
+
+/* Edge adds its own eye / clear buttons; we already have our own eye */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
+/* login / sign up: each step fades in */
+@keyframes auth-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.auth-fade {
+  animation: auth-fade 220ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-fade {
+    animation: none;
+  }
 }

@@ -5,9 +5,10 @@ import { retrieveUsrMemoryService } from "../services/memory.service.js";
 import { retrieveSpecificMemoryService } from "../services/memory.service.js";
 import { deleteMemoryService } from "../services/memory.service.js";
 import { updateMemoryService } from "../services/memory.service.js";
+import { deleteImageService } from "../services/storage.service.js";
 
 // fields a user is allowed to edit after creating a memory
-// imageURL is left out (a new photo should be a new memory), userId and captionStatus are controlled by the server
+// imageURL and imageKey are left out (a new photo should be a new memory), userId and captionStatus are controlled by the server
 const EDITABLE_FIELDS = ["note", "caption", "takenAt", "location", "placeName"];
 
 export const createMemoryController = async (req, res) => {
@@ -16,17 +17,36 @@ export const createMemoryController = async (req, res) => {
     // userId comes from the verified token (requireUserAuth already blocked unsigned users)
     const { userId } = getAuth(req);
     // captionStatus is left out on purpose, the server controls it (defaults to "pending")
-    const { imageURL, note, caption, takenAt, location, placeName } = req.body;
+    const { imageURL, imageKey, note, caption, takenAt, location, placeName } = req.body;
 
-    if (!imageURL) {
+    // typeof also catches missing values, and stops objects from crashing .startsWith() below
+    if (typeof imageURL !== "string" || typeof imageKey !== "string") {
       return res.status(400).json({
-        error: "imageURL is required",
+        error: "imageURL and imageKey are required",
+      });
+    }
+
+    // the upload signature locks uploads to memoria/<userId>, so a key outside that folder isn't this user's image
+    // the name part after the folder can only be letters, numbers, _ or -, so tricks like "memoria/<userId>/../<otherUser>/x" are rejected
+    const isOwnKey = new RegExp(`^memoria/${userId}/[A-Za-z0-9_-]+$`).test(imageKey);
+    if (!isOwnKey) {
+      return res.status(403).json({
+        error: "Image does not belong to this user",
+      });
+    }
+
+    // the url has to point at our cloudinary account and be the same image as the key
+    const cloudinaryPrefix = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/`;
+    if (!imageURL.startsWith(cloudinaryPrefix) || !imageURL.includes(`/${imageKey}.`)) {
+      return res.status(400).json({
+        error: "imageURL does not match imageKey",
       });
     }
 
     // call our service function with this data
     const newMemory = await createMemoryService(userId, {
       imageURL,
+      imageKey,
       note,
       caption,
       takenAt,
@@ -49,14 +69,62 @@ export const createMemoryController = async (req, res) => {
   }
 };
 
-// retrieve user memory information here as such
+// timeline page sizes: default when the client doesn't ask, and the most one request can get
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 50;
+
+// the cursor is "takenAt|_id" of the last memory on a page, base64url encoded so it's one url-safe string
+// the frontend never reads it, it just sends back whatever nextCursor it got
+const encodeCursor = (memory) =>
+  Buffer.from(`${memory.takenAt.toISOString()}|${memory._id}`).toString("base64url");
+
+// returns { takenAt, id } or null if the cursor was tampered with / malformed
+const decodeCursor = (cursor) => {
+  const [takenAtText, id] = Buffer.from(cursor, "base64url").toString("utf8").split("|");
+  const takenAt = new Date(takenAtText);
+  if (Number.isNaN(takenAt.getTime()) || !/^[a-f0-9]{24}$/.test(id ?? "")) return null;
+  return { takenAt, id };
+};
+
+// retrieve one page of the user's timeline: GET /yourmemories?limit=20&cursor=<nextCursor from the last page>
 export const retrieveUsrMemoryController = async (req, res) => {
   try {
     // start of with req userId and go into retrieving a user's specific data using their userId
     const { userId } = getAuth(req);
-    // call the service function.
-    const memories = await retrieveUsrMemoryService(userId);
-    return res.status(200).json(memories);
+
+    // limit: optional, has to be a whole number 1 or more, capped so nobody can ask for everything at once
+    let limit = DEFAULT_PAGE_SIZE;
+    if (req.query.limit !== undefined) { 
+      // remeber query reads in a string so we convert it into a number. 
+      limit = Number(req.query.limit);
+      if (!Number.isInteger(limit) || limit < 1) {
+        return res.status(400).json({
+          error: "limit must be a whole number of 1 or more",
+        });
+      }
+      limit = Math.min(limit, MAX_PAGE_SIZE);
+    }
+
+    // cursor: optional, no cursor means the first page
+    let cursor;
+    if (req.query.cursor !== undefined) {
+      cursor = typeof req.query.cursor === "string" ? decodeCursor(req.query.cursor) : null;
+      if (!cursor) {
+        return res.status(400).json({
+          error: "Invalid cursor",
+        });
+      }
+    }
+
+    // the service fetches limit + 1, an extra one coming back means there's another page
+    const results = await retrieveUsrMemoryService(userId, { limit, cursor });
+    const hasMore = results.length > limit;
+    const memories = hasMore ? results.slice(0, limit) : results;
+
+    // next page continues after the last memory we're sending, null means the user reached the end
+    const nextCursor = hasMore ? encodeCursor(memories[memories.length - 1]) : null;
+
+    return res.status(200).json({ memories, nextCursor });
   } catch (error) {
     // a GET has no body to validate, so any error here is a server error
     console.error("Error retrieving memories", error.message);
@@ -112,8 +180,20 @@ export const deleteMemoryController = async (req, res) => {
       });
     }
 
-    // LATER (once image uploads exist): also delete the image from Cloudinary/S3 using deletedMemory.imageURL,
-    // if that cleanup fails just log it, the memory is already gone so still respond 200
+    // also delete the photo from cloudinary (older memories made before uploads have no imageKey, so skip those)
+    // database first, cloudinary second: if this cleanup fails the memory is still gone, so just log it and still respond 200
+    if (deletedMemory.imageKey) {
+      try {
+        const result = await deleteImageService(deletedMemory.imageKey);
+        // destroy doesn't throw for a missing image, it returns { result: "not found" }
+        if (result.result !== "ok") {
+          console.warn("Cloudinary image not deleted", deletedMemory.imageKey, result.result);
+        } 
+      } catch (error) {
+        console.error("Error deleting image from Cloudinary", deletedMemory.imageKey, error.message);
+      }
+    }
+
     return res.status(200).json({
       message: "Memory deleted",
       id: memoryId,
