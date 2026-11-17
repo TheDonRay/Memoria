@@ -69,7 +69,7 @@ export function MemoriesProvider({children}) {
 
   const [memories, setMemories] = useState([])
   // true while the FIRST page is loading
-  const [loading, setLaoding] = useState(true)
+  const [loading, setLoading] = useState(true)
   // true while "load more" is fetching another page
   const [loadingMore, setLoadingMore] = useState(false)
   // a message if something failed, '' when everything is good
